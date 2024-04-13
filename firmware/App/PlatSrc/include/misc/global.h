@@ -28,7 +28,8 @@ extern int Global_Is_Show_Mnemonic;
 extern int Global_Is_Key_Down_End;
 extern int Global_Is_BLE_Recv_Data;
 extern int Global_Ble_Mtu;
-
+extern int Global_Ble_Process_Step;
+extern int GLobal_Is_Coin_EVM_Category;
 
 #ifdef BUILD_FOR_DEV
 

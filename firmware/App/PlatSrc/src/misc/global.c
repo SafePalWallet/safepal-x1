@@ -34,7 +34,8 @@ int Global_Is_Show_Mnemonic = 0;
 int Global_Is_Key_Down_End = 0;
 int Global_Is_BLE_Recv_Data = 0;
 int Global_Ble_Mtu = 0;
-
+int Global_Ble_Process_Step = 0;
+int GLobal_Is_Coin_EVM_Category = 0;
 
 #ifdef BUILD_FOR_DEV
 

@@ -325,7 +325,7 @@ int confirmBindAccount(void) {
 
     do {
         ret = gui_disp_info(res_getLabel(LANG_LABEL_BIND_WALLET),
-                            res_getLabel(LANG_LABEL_CONFIRM_BIND_WALLET), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER,
+                            res_getLabel(LANG_LABEL_CONFIRM_BIND_WALLET), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                             res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
         db_msg("dialog_confirm ret:%d", ret);
         if (ret == EVENT_CANCEL) {
@@ -553,22 +553,28 @@ int confirmGetPubkey(void) {
     }
 
     unsigned char passhash[PASSWD_HASHED_LEN] = {0};
-    int ret = passwdKeyboard(0, res_getLabel(LANG_LABEL_ENTER_PASSWD), PIN_CODE_VERITY, passhash, 1);
-    //ddi_bt_ioctl(DDI_BT_CTL_BLE_CLEAR_FIFO, 0, 0);
-    if (ret == USER_PASSWD_ERR_ABORT) {
-        ret = gui_disp_info(res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_CANCEL_ADD_COIN), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_CANCEL), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
-        if (ret != EVENT_CANCEL) {
+    int ret = 0;
+    do {
+        ret = passwdKeyboard(0, res_getLabel(LANG_LABEL_ENTER_PASSWD), PIN_CODE_VERITY, passhash, 1);
+        if (ret == USER_PASSWD_ERR_ABORT) {
+            ret = gui_disp_info(res_getLabel(LANG_LABEL_CANCEL), res_getLabel(LANG_LABEL_CANCEL_ADD_COIN), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_CANCEL), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+            if (ret != EVENT_CANCEL) {
+                proto_delete_wmessage(wmsg);
+                return USER_PASSWD_ERR_ABORT;
+            } else {
+                continue;
+            }
+        } else if (ret < 0 || ret == RETURN_DISP_MAINPANEL) {
+            db_error("input passwd ret:%d", ret);
             proto_delete_wmessage(wmsg);
-            return USER_PASSWD_ERR_ABORT;
+            if (gHaveSeed) {
+                //changeWindow(WINDOWID_MAINPANEL);
+            }
+            return ret;
+        } else {
+            break;
         }
-    } else if (ret < 0 || ret == RETURN_DISP_MAINPANEL) {
-        db_error("input passwd ret:%d", ret);
-        proto_delete_wmessage(wmsg);
-        if (gHaveSeed) {
-            //changeWindow(WINDOWID_MAINPANEL);
-        }
-        return ret;
-    }
+    } while (1);
 
     CoinInfo qinfo;
     int oknum = 0;
@@ -612,7 +618,7 @@ int confirmGetPubkey(void) {
         return PROC_ERROR_COIN_ALL_NOT_SUPPORT;
     } else if (errnum) { //some false
         ret = gui_disp_info(res_getLabel(LANG_LABEL_ADD_COIN_TITLE), res_getLabel(LANG_LABEL_ADD_COIN_UNSUPPORT_TIPS),
-                            TEXT_ALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
         if (ret == EVENT_CANCEL) {
             proto_delete_wmessage(wmsg);
             respCommonNotify(DEVICE_NOT_SUPPORT);
@@ -729,6 +735,7 @@ int procDeviceState(void) {
         //return ret;
     }
     proto_delete_wmessage(wmsg);
+    Global_Ble_Process_Step = STAT_BLE_STEP_6;
     return PROC_WITHOUT_RSP;
 }
 
@@ -834,6 +841,7 @@ int procResponeNotify(int type, int code, qr_packet_header_info *h) {
         pbc_wmessage_string(wmsg_ack, "check_code", h->checkcode, 4);
     } else {
         db_msg("code:%d", code);
+        memzero(mClientName, sizeof(mClientName));
         pbc_wmessage_integer(wmsg, "code", code, 0);
     }
 
@@ -878,7 +886,7 @@ int procActiveDevice(void) {
     }
 
     if (req.type == DEVICE_ACTIVE_REQUEST_URL) {
-        loading_win_start(0, "Activation", "Activating...", 0);
+        loading_win_start(0, res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_ACTIVATING), 0);
         urlLen = active_get_url(buff, 128);
         db_msg("active_get_url ret:%d", urlLen);
         if (urlLen <= 0) {
@@ -917,30 +925,25 @@ int procActiveDevice(void) {
 static char mWalletname[32];
 
 void dispMainPanel(int page) {
-    db_msg("dispMainPanel");
     st_bt_info bt_flash_info;
     int x0 = 0, y0 = 0, width = 0;
     strRect rect;
-    char mBleName[16];
+    char mBleName[16] = "Unknown";
     const char *tips = NULL;
     const unsigned char *pImage = NULL;
     const unsigned char *pImage_left = NULL;
     const unsigned char *pImage_right = NULL;
-
-    memset(mBleName, 0x0, sizeof(mBleName));
-    memset(mWalletname, 0x0, sizeof(mWalletname));
-    memset(&bt_flash_info, 0x0, sizeof(st_bt_info));
 
     if (page < 0 || page > 2) {
         page = 0;
     }
 
     if (page == 0) {
+        memset(&bt_flash_info, 0x0, sizeof(st_bt_info));
         ddi_flash_read(YC_INFOR_ADDR, (uint8_t *) &bt_flash_info, sizeof(bt_flash_info));
         if ((bt_flash_info.flag == BT_INFOR_FLAG) && (!is_empty_string(bt_flash_info.ble_name))) {
+            memset(mBleName, 0x0, sizeof(mBleName));
             memcpy(mBleName, bt_flash_info.ble_name, sizeof(bt_flash_info.ble_name));
-        } else {
-            ddi_bt_ioctl(DDI_BT_CTL_RNAME, CTRL_BLE_NAME_TYPE, (uint32_t) mBleName);
         }
         pImage_left = gImage_setting14;
         int ble_status = ddi_bt_get_status();
@@ -963,6 +966,7 @@ void dispMainPanel(int page) {
         tips = res_getLabel(LANG_LABEL_SET_TITLE);
     }
 
+    memset(mWalletname, 0x0, sizeof(mWalletname));
     get_device_name(mWalletname, sizeof(mWalletname), 1);
     gui_creat_win(mWalletname, NULL, NULL);
 
@@ -986,7 +990,7 @@ void dispMainPanel(int page) {
 
     width = ddi_lcd_get_text_width(tips);
     x0 = (g_gui_info.uiScrWidth - width) / 2;
-    db_msg("width:%d, x0:%d", width, x0);
+//    db_msg("width:%d, x0:%d", width, x0);
     y0 = g_gui_info.uiScrHeight - g_gui_info.uiLineHeight;
     ddi_lcd_show_text(x0, y0, tips);
 
@@ -1008,7 +1012,7 @@ int dispPairCode(void) {
             number /= 10;
         }
         snprintf(str, sizeof(str), "%s:\n%s", res_getLabel(LANG_LABEL_BT_PAIRING_CODE), disp);
-        ret = gui_disp_info(res_getLabel(LANG_LABEL_BT_CONNECT_TITLE), str, TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_BT_CONNECT_TITLE), str, TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                             res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
         if (ret == EVENT_OK) {
             status = STAT_BT_CONFIRM_KEY;
@@ -1022,34 +1026,28 @@ int dispPairCode(void) {
 }
 
 static int showWalletDetails(void) {
-    char str[128], blename[32], sn[24];
+    char str[128];
     int width = 0;
-
-    memset(str, 0x0, sizeof(str));
-    memset(blename, 0x0, sizeof(blename));
-    memset(sn, 0x0, sizeof(sn));
 
     dwin_init();
 
     int ble_status = ddi_bt_get_status();
     if (ble_status == BT_STATUS_CONNECTED) {
         memset(str, 0x0, sizeof(str));
-        snprintf(str, sizeof(str), "%s:\n%s", "Connecting Device", mClientName);
+        snprintf(str, sizeof(str), "%s:\n%s", "Connected Device", mClientName);
         SetWindowMText(0, str);
     }
 
     st_bt_info bt_flash_info;
-    char bleName[24] = {0};
+    char bleName[24] = "Unknown";
     ddi_flash_read(YC_INFOR_ADDR, (uint8_t *) &bt_flash_info, sizeof(bt_flash_info));
     if ((bt_flash_info.flag == BT_INFOR_FLAG) && (!is_empty_string(bt_flash_info.ble_name))) {
         memcpy(bleName, bt_flash_info.ble_name, sizeof(bt_flash_info.ble_name));
-    } else {
-        ddi_bt_ioctl(DDI_BT_CTL_RNAME, CTRL_BLE_NAME_TYPE, (uint32_t) bleName);
     }
 
     memset(str, 0x0, sizeof(str));
     if (ble_status == BT_STATUS_CONNECTED) {
-        snprintf(str, sizeof(str), "%s: %s", "BlueTooth", "Connecting");
+        snprintf(str, sizeof(str), "%s: %s", "BlueTooth", "Connected");
     } else {
         snprintf(str, sizeof(str), "%s:\n%s", "BlueTooth", "Not connected");
     }
@@ -1085,9 +1083,9 @@ int mainPanel(void) {
     uint8_t param[8] = {0x06, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x2c, 0x01};
 
     ddi_bt_open();
-    //power on get cancel.
-    ddi_key_read(&key);
-    db_msg("key:%x", key);//cancel
+
+    uint8_t mode = LE_PAIRING_SEC_CONNECT_NUMERIC;
+    ddi_bt_ioctl(DDI_BT_CTL_SET_BLE_PAIRING_MODE, (uint32_t) &mode, 0);
 
     while (1) {
         if (isBrushPanel == 1 || status != statusOld) {
@@ -1123,6 +1121,7 @@ int mainPanel(void) {
                 db_msg("STAT_BT_INIT");
                 set_temp_screen_time(gSettings->mScreenSaver);
                 status = STAT_BT_START_PAIRING;
+                Global_Ble_Process_Step = STAT_BLE_STEP_1;
                 break;
 
             case STAT_BT_START_PAIRING:
@@ -1142,13 +1141,12 @@ int mainPanel(void) {
                     ddi_sys_msleep(1000);
                     ddi_sys_get_tick(&notifyTick);
                     respCommonNotify(DEVICE_READY);
+                    Global_Ble_Process_Step = STAT_BLE_STEP_2;
                     notifyCnt = 0;
                     cnt = 0;
                 } else {
                     cnt++;
                     if (cnt > PROC_BLE_GET_ENC_STATE_CNT) {
-                        uint8_t mode = LE_PAIRING_SEC_CONNECT_NUMERIC;
-                        ddi_bt_ioctl(DDI_BT_CTL_SET_BLE_PAIRING_MODE, (uint32_t) &mode, 0);
                         ddi_bt_ioctl(DDI_BT_CTL_BLE_START_PAIRING, 0, 0);
                         status = STAT_BT_DISP_CONFIRM_KEY;
                         cnt = 0;
@@ -1180,7 +1178,6 @@ int mainPanel(void) {
 
             case STAT_BT_GET_CONFIRM_KEY_STAT:
                 ret = ddi_bt_ioctl(DDI_BT_CTL_GET_STATUS, 0, 0);
-                db_msg("ret:%d, cnt:%d", ret, cnt);
                 if (ret == BT_BNEP_BLE_PAIR) {
                     status = STAT_BT_GET_ENCRY_STATE;
                     cnt = 0;
@@ -1188,10 +1185,12 @@ int mainPanel(void) {
                     cnt++;
                 }
                 btStatus = ddi_bt_get_status();
+                db_msg("ret:%d, cnt:%d, btStatus:%d", ret, cnt, btStatus);
                 if (cnt > PROC_BLE_CONFIRM_PAIR_STATE_CNT || btStatus != BT_STATUS_CONNECTED) {
                     gui_disp_info(res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TITLE),
-                                  res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TIPS), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER,
+                                  res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                   NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                    ddi_bt_disconnect();
                     status = STAT_BT_INIT;
                     cnt = 0;
                 }
@@ -1204,6 +1203,7 @@ int mainPanel(void) {
                     status = STAT_DATA_RECV;
                     ddi_sys_get_tick(&notifyTick);
                     respCommonNotify(DEVICE_READY);
+                    Global_Ble_Process_Step = STAT_BLE_STEP_2;
                     notifyCnt = 0;
                     cnt = 0;
                 } else {
@@ -1212,6 +1212,7 @@ int mainPanel(void) {
                         status = STAT_DATA_RECV;
                         ddi_sys_get_tick(&notifyTick);
                         respCommonNotify(DEVICE_READY);
+                        Global_Ble_Process_Step = STAT_BLE_STEP_2;
                         notifyCnt = 0;
                         cnt = 0;
                     }
@@ -1267,6 +1268,7 @@ int mainPanel(void) {
                             respCommonNotify(DEVICE_READY);
                             ddi_sys_get_tick(&notifyTick);
                             notifyCnt++;
+                            Global_Ble_Process_Step = STAT_BLE_STEP_2 + notifyCnt;
                         }
                     }
                 }
@@ -1311,11 +1313,11 @@ int mainPanel(void) {
                 ret = TxShowWin();
                 if (ret == 0) {
                     gui_disp_info(res_getLabel(LANG_LABEL_TX_OK_TITLE), res_getLabel(LANG_LABEL_TX_OK_TIPS),
-                                  TEXT_ALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                                  TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     status = STAT_DATA_RECV;
                 } else if (ret == KEY_EVENT_ABORT) {
                     ret = gui_disp_info(res_getLabel(LANG_LABEL_CANCEL), res_getLabel(LANG_LABEL_TX_CANCEL_TIPS),
-                                        TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                        TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                         res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     if (ret == EVENT_CANCEL) {
                         status = STAT_TRANS_SIGN;

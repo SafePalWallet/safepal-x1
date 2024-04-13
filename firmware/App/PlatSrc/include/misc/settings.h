@@ -11,8 +11,8 @@
 #define APP_VERSION_PREFIX "V"
 #endif
 
-#define DEVICE_APP_INT_VERSION  10001
-#define DEVICE_APP_VERSION  APP_VERSION_PREFIX"1.0.1"
+#define DEVICE_APP_INT_VERSION  10007
+#define DEVICE_APP_VERSION  APP_VERSION_PREFIX"1.0.7"
 
 #define COINS_INIT_VERSION 5
 
@@ -81,7 +81,7 @@ enum {
 };
 
 #define IS_VALID_LANG_ID(x) ((x)>=0 && (x)<LANG_MAXID)
-#define LANG_NOT_SHOW_BACK_ICON (-99)
+#define LANG_SHOW_ABOUT_WITH_BACK_ICON (-99)
 
 #ifdef __cplusplus
 extern "C" {

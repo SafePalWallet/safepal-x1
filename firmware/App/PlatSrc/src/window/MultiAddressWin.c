@@ -50,7 +50,7 @@ static int showAddress(int index) {
     }
 
     AddressInfo item = mItems[index];
-    int ret = gui_disp_info(symbol ? symbol : "", item.address, TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+    int ret = gui_disp_info(symbol ? symbol : "", item.address, TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
                            res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
     if (ret == EVENT_KEY_F1) {
         return RETURN_DISP_MAINPANEL;

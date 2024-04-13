@@ -21,8 +21,29 @@ static int showReceiveAddrList(int type, const char *uname, char *symbol) {
     int ret = 0;
     HDNode mHDNode;
 
+    if (IS_VALID_COIN_TYPE(type)) {
+        const CoinConfig *coinConfig = getCoinConfig(type, uname);
+        if (coinConfig == NULL) {
+            coinConfig = getCoinConfigForMainType(type);
+        }
+
+        if (coinConfig == NULL) {
+            db_error("coinConfig null");
+            return -1;
+        }
+    } else if ((!IS_VALID_COIN_TYPE(type)) && (GLobal_Is_Coin_EVM_Category == 1)) {
+        db_msg("evm category type:%#x", type);
+    } else {
+        db_error("coinConfig null, type:%#x, GLobal_Is_Coin_EVM_Category:%d", type, GLobal_Is_Coin_EVM_Category);
+        return -2;
+    }
+
     memzero(&mHDNode, sizeof(HDNode));
-    ret = wallet_getHDNode(type, uname, &mHDNode);
+    if ((!IS_VALID_COIN_TYPE(type)) && (GLobal_Is_Coin_EVM_Category == 1)) {
+        ret = wallet_getHDNode(COIN_TYPE_ETH, "ETH", &mHDNode);
+    } else {
+        ret = wallet_getHDNode(type, uname, &mHDNode);
+    }
     if (ret == -404) {
         unsigned char passhash[PASSWD_HASHED_LEN] = {0};
         ret = passwdKeyboard(0, "Enter PIN Code", PIN_CODE_VERITY, passhash, PASSKB_FLAG_RANDOM);
@@ -48,19 +69,14 @@ static int showReceiveAddrList(int type, const char *uname, char *symbol) {
             return 0;
         }
     }
+
     char address[MAX_ADDR_SIZE];
-    const CoinConfig *coinConfig = getCoinConfig(type, uname);
-    if (coinConfig == NULL) {
-        coinConfig = getCoinConfigForMainType(type);
-    }
-
-    if (coinConfig == NULL) {
-        db_error("coinConfig null");
-        return -1;
-    }
-
     db_msg("type:%d uname:%s", type, uname);
-    ret = wallet_genAddress(address, sizeof(address), &mHDNode, type, uname, 0, 0);
+    if (GLobal_Is_Coin_EVM_Category) {
+        ret = wallet_genAddress(address, sizeof(address), &mHDNode, COIN_TYPE_ETH, "ETH", 0, 0);
+    } else {
+        ret = wallet_genAddress(address, sizeof(address), &mHDNode, type, uname, 0, 0);
+    }
     if (ret <= 0) {
         db_error("genAddress false type:%d uname:%s ret:%d", type, uname, ret);
         ret = dialog_error3(0, -403, "Address generated failed.");
@@ -70,7 +86,7 @@ static int showReceiveAddrList(int type, const char *uname, char *symbol) {
         return -1;
     }
 
-    int ret1 = gui_disp_info(symbol, address, TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+    int ret1 = gui_disp_info(symbol, address, TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
                              res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
 
     db_msg("showReceiveAddrList:%d EVENT_KEY_F1:%d", ret1, EVENT_KEY_F1);

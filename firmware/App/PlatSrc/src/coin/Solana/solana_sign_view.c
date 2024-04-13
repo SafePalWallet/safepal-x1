@@ -111,6 +111,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
 		name = msg->action.token_transfer.app_name;
 		symbol = msg->action.token_transfer.app_name;
+	} else if ((char)msg->operation_type==OP_TYPE_COMPRESSED_NFT_TRANSFER) {
+		if (is_empty_string(msg->action.compressedNFT.app_name) || is_empty_string(msg->action.compressedNFT.app_name)) {
+			db_error("msg->action.compressedNFT.app_name null");
+			return -1;
+		}
+		
+		name = msg->action.compressedNFT.app_name;
+		symbol = msg->action.compressedNFT.app_name;
 	} else if((char)msg->operation_type==OP_TYPE_DAPP ){
 		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 		symbol = msg->action.dapp.app_name;
@@ -239,6 +247,29 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
 		send_amount = msg->action.token_transfer.fee;
+		format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
+		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
+		view_add_txt(TXS_LABEL_MAXID, mainConfig->symbol);
+	} else if ((char) msg->operation_type == OP_TYPE_COMPRESSED_NFT_TRANSFER) {
+		view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
+		view_add_txt(TXS_LABEL_MAXID, symbol);
+
+		view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		const char *uname2 = coin_uname;
+		if (strcmp(msg->coin.path, sol_get_hd_path(COIN_TYPE_SOLANA, COIN_UNAME_SOL2)) == 0) {
+			uname2 = COIN_UNAME_SOL2;
+		}
+		wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, uname2, 0, 0);
+		omit_string(tmpbuf, tmpbuf, 26, 11);
+		view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
+
+		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
+		omit_string(tmpbuf, msg->action.compressedNFT.newLeafOwner, 26, 11);
+		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+
+		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+		send_amount = msg->action.compressedNFT.fee;
 		format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_MAXID, mainConfig->symbol);

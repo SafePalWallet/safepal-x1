@@ -74,7 +74,7 @@ int VerifyWinGuide() {
         switch (nextIndex) {
             case OP_INDEX_VERIFY_TIPS: {
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_VERIFY), res_getLabel(LANG_LABEL_VERIFY_TIPS),
-                                   TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
+                                    TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                    res_getLabel(LANG_LABEL_SUBMENU_OK), eventType);
                 if (ret == EVENT_OK) {
                     pushData(stack, OP_INDEX_ENTER_PASSWD);

@@ -70,11 +70,18 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		return -2;
 	}
 	
+	const CoinConfig *mainConfig = getCoinConfig(msg->coin.type, "SUI");
+	if (!mainConfig) {
+		db_msg("not mainConfig type:%d", msg->coin.type);
+		return -1;
+	}
+
 	if ((char) msg->operation_type == SUI_TRANSFER_MAIN || (char)msg->operation_type==SUI_TRANSFER_TOKEN) {
 		if (proto_check_exchange(&msg->exchange) != 0) {
 			db_error("invalid exchange");
 			return -3;
 		}
+		view->coin_symbol = res_getLabel(LANG_LABEL_SEND);;
 
 		uint8_t decimals = msg->token.decimals;
 		uint64_t amount = msg->action.sendCoins.kind.amount;
@@ -85,15 +92,15 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		memset(tmpbuf, 0, sizeof(tmpbuf));
 		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
 		strlcpy(db->send_value, tmpbuf, sizeof(db->send_value));
+		// view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
+		view_add_txt(TXS_LABEL_TOTAL_VALUE, symbol);
 	
       	
-		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		amount = msg->action.sendCoins.gasData.budget;
-	    send_value = proto_coin_real_value(amount, 9);
-		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
-		db_msg("feed value:%s", tmpbuf);
-		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
+		if (mainConfig) {
+			view_add_txt(TXS_LABEL_MAXID, "Chain:");
+			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+		}
 
 		view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
 		memset(tmpbuf, 0, sizeof(tmpbuf));
@@ -106,14 +113,38 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		omit_string(tmpbuf, msg->action.sendCoins.kind.to, 20, 20);
 		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
 
-		view->total_height = 2 * SCREEN_HEIGHT;
+		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+		amount = msg->action.sendCoins.gasData.budget;
+	    send_value = proto_coin_real_value(amount, 9);
+		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
+		db_msg("feed value:%s", tmpbuf);
+		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 
+		view->total_height = 2 * SCREEN_HEIGHT;
 	} else if ((char) msg->operation_type == SUI_MSG || (char) msg->operation_type == SUI_DAPP) {
+		view->coin_symbol = res_getLabel(LANG_LABEL_SIGN_TRANSACTION);
 		db->tx_type = TX_TYPE_APP_SIGN_MSG;
 		view->total_height = SCREEN_HEIGHT;
+
+		view_add_txt(TXS_LABEL_TOTAL_VALUE, "DApp:");
+		view_add_txt(TXS_LABEL_TOTAL_MONEY, symbol);
+
+		if (mainConfig) {
+			view_add_txt(TXS_LABEL_MAXID, "Chain:");
+			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+		}
+
+		view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		ret = wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
+		db_msg("my address ret:%d addr:%s", ret, tmpbuf);
+		view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
+
 		view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.dapp.content);
 	} else if ((char) msg->operation_type == SUI_NFT) {
-		view_add_txt(TXS_LABEL_TOTAL_VALUE, "Object Id");
+		view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
+
+		view_add_txt(TXS_LABEL_TOTAL_VALUE, "Object Id:");
 
 		char tmpbuf[128];
 		GasPayment *object = msg->action.nft.kind.object;
@@ -128,13 +159,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		view_add_txt(TXS_LABEL_TOTAL_MONEY, tmpbuf);
 
 
-		memset(tmpbuf, 0, sizeof(tmpbuf));
-		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		uint64_t amount = msg->action.nft.gasData.budget;
-	    double send_value = proto_coin_real_value(amount, 9);
-		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
-		db_msg("feed value:%s", tmpbuf);
-		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
+		if (mainConfig) {
+			view_add_txt(TXS_LABEL_MAXID, "Chain:");
+			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+		}
 
 		memset(tmpbuf, 0, sizeof(tmpbuf));
 		view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
@@ -146,6 +174,15 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
 		omit_string(tmpbuf, msg->action.nft.kind.to, 20, 20);
 		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+		uint64_t amount = msg->action.nft.gasData.budget;
+	    double send_value = proto_coin_real_value(amount, 9);
+		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
+		db_msg("feed value:%s", tmpbuf);
+		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
+
 		view->total_height = 2 * SCREEN_HEIGHT;
 	}
 
@@ -162,7 +199,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 	view->coin_type = coin_type;
 	view->coin_uname = coin_uname;
 	view->coin_name = name;
-	view->coin_symbol = symbol;
+	// view->coin_symbol = symbol;
 
 	//save coin info
 	if (view->msg_from == MSG_FROM_QR_APP) {

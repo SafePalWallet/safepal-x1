@@ -73,53 +73,61 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
         return NULL;
     }
 
-    ret = cstr_append_buf(tx_str, "(", 1);
-    if (ret != 1) {
-        db_error("tx_str add ( err");
-        return NULL;
-    }
-
-    const CoinConfig *coinConfig = getCoinConfig(type, uname);
-    if (coinConfig == NULL) {
-        coinConfig = getCoinConfigForMainType(type);
-    }
-
-    if (coinConfig == NULL) {
-        db_error("coinConfig null");
-        return NULL;
+    if (strcmp(uname, "OETH") != 0 &&
+        strcmp(uname, "ARETH") != 0 &&
+        strcmp(uname, "AURORAETH") != 0 ) {
+        ret = cstr_append_buf(tx_str, "(", 1);
+        if (ret != 1) {
+            db_error("tx_str add ( err");
+            return NULL;
+        }
     }
 
     const char *name = NULL;
-    if (coinConfig->type == COIN_TYPE_ERC20 || (coinConfig->type == COIN_TYPE_ETH && strcmp(symbol, "ETH"))) {
-        name = "ERC20";
-    } else if (coinConfig->type == COIN_TYPE_POLKADOT && !strcmp(symbol, "KSM")) {
-        name = "Polkadot";
-    } else if (coinConfig->type == COIN_TYPE_VET) {
-        name = "VeChain";
-    } else if (coinConfig->type == COIN_TYPE_TRX) {
-        name = "Tron";
-    } else if (coinConfig->type == COIN_TYPE_TRC10) {
-        name = "TRC10";
-    } else if (coinConfig->type == COIN_TYPE_TRC20) {
-        name = "TRC20";
-    } else if (!strcmp(coinConfig->name, "BNB")) {
-        name = "BEP2";
-    } else if (!strcmp(coinConfig->name, "BNB(BEP20)")) {
-        name = "BEP20";
-    } else if (!strcmp(coinConfig->name, "MATIC(Polygon)")) {
-        name = "Polygon";
-    } else if (!strcmp(coinConfig->name, "Huobi(HRC20)")) {
-        name = "HRC20";
-    } else if (!strcmp(coinConfig->name, "Ether(Boba)")) {
-        name = "Boba";
-    } else if (!strcmp(coinConfig->name, "GLMR(Moonbeam)")) {
-        name = "Moonbeam";
-    } else if (!strcmp(coinConfig->name, "xDAI(Gnosis)")) {
-        name = "Gnosis";
-    } else if (!strcmp(coinConfig->name, "RBTC(RSK)")) {
-        name = "RSK";
+    if (type == COIN_TYPE_BRC20) {
+        name = "BRC20";
     } else {
-        name = coinConfig->name;
+        const CoinConfig *coinConfig = getCoinConfig(type, uname);
+        if (coinConfig == NULL) {
+            coinConfig = getCoinConfigForMainType(type);
+        }
+
+        if (coinConfig == NULL) {
+            db_error("coinConfig null");
+            return NULL;
+        }
+    
+        if (coinConfig->type == COIN_TYPE_ERC20 || (coinConfig->type == COIN_TYPE_ETH && strcmp(symbol, "ETH"))) {
+            name = "ERC20";
+        } else if (coinConfig->type == COIN_TYPE_POLKADOT && !strcmp(symbol, "KSM")) {
+            name = "Polkadot";
+        } else if (coinConfig->type == COIN_TYPE_VET) {
+            name = "VeChain";
+        } else if (coinConfig->type == COIN_TYPE_TRX) {
+            name = "Tron";
+        } else if (coinConfig->type == COIN_TYPE_TRC10) {
+            name = "TRC10";
+        } else if (coinConfig->type == COIN_TYPE_TRC20) {
+            name = "TRC20";
+        } else if (coinConfig->type == COIN_TYPE_ZKFAIR) {
+            name = "ZKFair";
+        } else if (!strcmp(coinConfig->name, "BNB")) {
+            name = "BEP2";
+        } else if (!strcmp(coinConfig->name, "BNB(BEP20)")) {
+            name = "BEP20";
+        } else if (!strcmp(coinConfig->name, "MATIC(Polygon)")) {
+            name = "Polygon";
+        } else if (!strcmp(coinConfig->name, "Huobi(HRC20)")) {
+            name = "HRC20";
+        } else if (!strcmp(coinConfig->name, "Ether(Boba)")) {
+            name = "Boba";
+        } else if (!strcmp(coinConfig->name, "GLMR(Moonbeam)")) {
+            name = "Moonbeam";
+        } else if (!strcmp(coinConfig->name, "xDAI(Gnosis)")) {
+            name = "Gnosis";
+        } else {
+            name = coinConfig->name;
+        }
     }
 
     if (name == NULL) {
@@ -127,19 +135,23 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
         return NULL;
     }
 
-    ret = cstr_append_buf(tx_str, name, strlen(name));
-    if (ret != 1) {
-        db_error("tx_str add name err");
-        return NULL;
+    if (strcmp(uname, "OETH") != 0 &&
+        strcmp(uname, "ARETH") != 0 &&
+        strcmp(uname, "AURORAETH") != 0 ) {
+        ret = cstr_append_buf(tx_str, name, strlen(name));
+        if (ret != 1) {
+            db_error("tx_str add name err");
+            return NULL;
+        }
+
+        ret = cstr_append_buf(tx_str, ")\0", 1);
+        if (ret != 1) {
+            db_error("tx_str add name err");
+            return NULL;
+        }
     }
 
-    ret = cstr_append_buf(tx_str, ")\0", 1);
-    if (ret != 1) {
-        db_error("tx_str add name err");
-        return NULL;
-    }
-
-    db_msg("tx_str:%s name:%s coinConfig->type:%d", tx_str->str, name, coinConfig->type);
+    db_msg("tx_str:%s name:%s", tx_str->str, name);
 
     return name;
 }
@@ -152,7 +164,7 @@ static int addressWin(int param) {
     }
     db_msg("jumpTo type:%x,uname:%s symbol:%s", p->type, p->uname, p->symbol);
 
-    if (IS_BTC_COIN_TYPE(p->type) || p->type == COIN_TYPE_SOLANA) {
+    if (IS_BTC_COIN_TYPE(p->type) || p->type == COIN_TYPE_SOLANA ||  p->type == COIN_TYPE_BRC20) {
         db_msg("jumpTo btc or sol win");
         return AddressTypeWin(param);
     } else {
@@ -210,9 +222,21 @@ static int refreshItemList(int init_select) {
         }
     } else {
         cstring *tx_str = cstr_new_sz(10);
+        const char *name = NULL;
+        GLobal_Is_Coin_EVM_Category = 0;
         for (i = 0; i < mViewTotal; i++) {
-            db_msg("name:%s symbol:%s", mItems[i].name, mItems[i].symbol);
-            const char *name = getTypeUname(mItems[i].type, mItems[i].symbol, mItems[i].uname, tx_str);
+            db_msg("name:%s symbol:%s, flag:%#x", mItems[i].name, mItems[i].symbol, mItems[i].flag);
+            if ((!IS_VALID_COIN_TYPE(mItems[i].type)) && (mItems[i].flag & DB_FLAG_UNIVERSAL_EVM)) {
+                cstr_clean(tx_str);
+                cstr_append_buf(tx_str, mItems[i].symbol, strlen(mItems[i].symbol));
+                cstr_append_buf(tx_str, "(", 1);
+                cstr_append_buf(tx_str, mItems[i].name, strlen(mItems[i].name));
+                cstr_append_buf(tx_str, ")\0", 1);
+                name = mItems[i].name;
+                GLobal_Is_Coin_EVM_Category = 1;
+            } else {
+                name = getTypeUname(mItems[i].type, mItems[i].symbol, mItems[i].uname, tx_str);
+            }
 
             if (name == NULL) {
                 db_error("getTypeUname failed");
@@ -257,6 +281,7 @@ static int CoinWinInit() {
     mViewTotal = 0;
     mItemTotal = 0;
     mEditMode = 0;
+    GLobal_Is_Coin_EVM_Category = 0;
     memset(&mItems, 0, sizeof(mItems));
     int refresh = 0, i = 0;
     int ret = 0;

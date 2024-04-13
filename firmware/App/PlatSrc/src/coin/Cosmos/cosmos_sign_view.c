@@ -158,24 +158,23 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         }
 
         //fee
-        /*memset(tmpbuf, 0, sizeof(tmpbuf));
-        view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-        fee = atoi(msg->general_fee);
-        format_coin_real_value(tmpbuf, sizeof(tmpbuf), fee, 6);
+        memset(tmpbuf, 0x00, sizeof(tmpbuf));
+        ret = bignum2double(msg->feeBytes.bytes, msg->feeBytes.size, coin_decimals, NULL, tmpbuf, sizeof(tmpbuf));
+        db_msg("ret:%d,tmpbuf:%s", ret, tmpbuf);
         view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
-		// view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
-*/
-        if(msg->fee.amount) {
-            CosmosAmount *amount = msg->fee.amount;
-            if(amount->amount) {
-                memset(tmpbuf, 0, sizeof(tmpbuf));
-                view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-                fee = atoi(amount->amount);
-                format_coin_real_value(tmpbuf, sizeof(tmpbuf), fee, 6);
-                view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
-                view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
-            }
-        }
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
+
+        // if(msg->fee.amount) {
+        //     CosmosAmount *amount = msg->fee.amount;
+        //     if(amount->amount) {
+        //         memset(tmpbuf, 0, sizeof(tmpbuf));
+        //         view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+        //         fee = atoi(amount->amount);
+        //         format_coin_real_value(tmpbuf, sizeof(tmpbuf), fee, 6);
+        //         view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
+        //         view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
+        //     }
+        // }
 
 #if 0
         //snprintf(tmpbuf, sizeof(tmpbuf), "tax:%s", msg->tax);

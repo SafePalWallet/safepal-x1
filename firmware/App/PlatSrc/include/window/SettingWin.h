@@ -56,6 +56,8 @@ enum {
 
 int showDownloadApp();
 
+int showAboutWallet(void);
+
 int SettingWin(void);
 
 #endif

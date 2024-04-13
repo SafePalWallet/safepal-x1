@@ -73,6 +73,10 @@ int device_read_settings(unsigned char *data, int size);
 
 int device_save_settings(const unsigned char *data, int size);
 
+int device_read_mnemonic_entropy(unsigned char *data, int size);
+
+int device_save_mnemonic_entropy(const unsigned char *data, int size);
+
 int device_clean_all_info(void);
 
 int device_get_hw_break_state(int trytime);

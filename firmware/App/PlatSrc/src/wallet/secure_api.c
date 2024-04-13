@@ -717,7 +717,34 @@ int sapi_store_seed(const unsigned char *seed, int seedlen, const unsigned char 
 
 int sapi_destory_seed() {
     gSeedAccountId = 0;
+    device_save_mnemonic_entropy(NULL, 0);
     return call_secure_agent0(SAPI_CMD_DESTORY_SEED, NULL, 0);
+}
+
+static int sapi_store_mnemonic_entropy(const unsigned char *passwd, int passlen, const unsigned char *mnemonic, int len) {
+    uint8_t mnemonic_bits[64] = {0}; // entropy need 33
+    int ret = mnemonic_to_entropy((const char *) mnemonic, mnemonic_bits + 1);
+    if (ret <= 0 || (ret % 11) != 0) {
+        db_error("invalid mnemonic entropy len:%d", ret);
+        return -1;
+    }
+    ret = ret / 11;
+    mnemonic_bits[0] = ret;
+
+    //encode entropy
+    ret = sapi_encode_data(passwd, passlen, 0x1, mnemonic_bits, 34, mnemonic_bits, sizeof(mnemonic_bits));
+    if (ret < 34) {
+        memzero(mnemonic_bits, sizeof(mnemonic_bits));
+        return ret < 0 ? ret : -2;
+    }
+    int save_ret = device_save_mnemonic_entropy(mnemonic_bits, ret);
+    if (save_ret != ret) {
+        memzero(mnemonic_bits, sizeof(mnemonic_bits));
+        db_serr("save entropy failed ret:%d len:%d", save_ret, ret);
+        return -3;
+    }
+    memzero(mnemonic_bits, sizeof(mnemonic_bits));
+    return 0;
 }
 
 // inbuf: passwd(lv) | mnemonic(lv) | 8 mnemonic digest
@@ -754,7 +781,7 @@ int sapi_verify_mnemonic(const unsigned char *passwd, int passlen, const unsigne
         db_serr("verify mnemonic false ret:%d", ret);
         return ret;
     }
-    return 0;
+    return sapi_store_mnemonic_entropy(passwd, passlen, mnemonic, len);
 }
 
 // // inbuf: passwd(lv) | passphrase(lv)| passphrase digest 8

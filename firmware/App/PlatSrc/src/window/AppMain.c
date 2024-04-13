@@ -223,7 +223,7 @@ int dispOTAOK(void) {
     settings_save(SETTING_KEY_OTA_PRE_VERSION, 0);
     const char *format = (res_getLabel(LANG_LABEL_UPGRADE_SUCCESS));
     snprintf(tips, sizeof(tips), format, DEVICE_APP_VERSION);
-    gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+    gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
 }
 
 static int hw_break_cnt = 0;

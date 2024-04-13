@@ -36,6 +36,8 @@
 #include "FactoryWin.h"
 #include "BtRecvCode.h"
 #include "gui_icons.h"
+#include "SettingWin.h"
+#include "dynamic_win.h"
 
 #define ITEM_PREFIX_TXT        "%d"
 #define LANG_WORD_LEN            (25)
@@ -139,8 +141,8 @@ int setupLang(int param) {
         ret = gui_show_rich_menu_with_navi("Language",
                                            MENU_LIST | MENU_ICON_NUM | MENU_ONCE,
                                            supportCnt - offset > ONE_PAGE_ITEM_MAX_CNT ? ONE_PAGE_ITEM_MAX_CNT : supportCnt - offset, curInx, mMenu, INFO_OK,
-                                           param == 0 ? INFO_BACK : NULL, DIRECTION_ICON_UP_AND_DOWN,
-                                           param == 0 ? EVENT_KEY_F1 : EVENT_NONE);
+                                           IS_VALID_LANG_ID(param) ?  INFO_BACK : "About", DIRECTION_ICON_UP_AND_DOWN,
+                                           IS_VALID_LANG_ID(param) ? EVENT_KEY_F1 : EVENT_NONE);
         db_msg("gui_show_rich_menu_with_navi ret:%d", ret);
         if (ret == EVENT_NEXT_MENU) {
             db_msg("EVENT_NEXT_MENU");
@@ -198,21 +200,16 @@ int setupLang(int param) {
 
 static void dispActiveWaiting(void) {
     st_bt_info bt_flash_info;
-    uint8_t bleName[32] = {0};
+    uint8_t bleName[32] = "Unknown";
     uint8_t tips[128] = {0};
 
-    memset(bleName, 0x0, sizeof(bleName));
-    memset(tips, 0x0, sizeof(tips));
     memset(&bt_flash_info, 0x0, sizeof(st_bt_info));
-
     ddi_flash_read(YC_INFOR_ADDR, (uint8_t *) &bt_flash_info, sizeof(bt_flash_info));
     if ((bt_flash_info.flag == BT_INFOR_FLAG) && (!is_empty_string(bt_flash_info.ble_name))) {
         memcpy(bleName, bt_flash_info.ble_name, sizeof(bt_flash_info.ble_name));
-    } else {
-        ddi_bt_ioctl(DDI_BT_CTL_RNAME, CTRL_BLE_NAME_TYPE, (uint32_t) bleName);
     }
     int os_version = ddi_sys_get_firmware_ver(OS_VER);
-    snprintf(tips, sizeof(tips), "%s\nBLE: %s\nVersion: %s-%d", res_getLabel(LANG_LABEL_BT_WAIT_CONNECT), bleName, DEVICE_APP_VERSION, os_version);
+    snprintf(tips, sizeof(tips), "%s\n%s: %s\nVersion: %s-%d", res_getLabel(LANG_LABEL_BT_WAIT_CONNECT), res_getLabel(LANG_LABEL_DEVICE), bleName, DEVICE_APP_VERSION, os_version);
     gui_disp_msg(res_getLabel(LANG_LABEL_BT_CONNECT_TITLE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), NULL);
 }
 
@@ -240,7 +237,7 @@ static int showDownloadAppQR(void) {
     gui_draw_ok_button();
 
     ddi_lcd_brush_screen();
-
+    
     int key = 0;
     int brush_title = 1;
     while (1) {
@@ -267,7 +264,7 @@ static int activeDevice(void) {
     int status = 0, retval = 0, recvlen = 0, notifyTick = 0;
     uint32_t key, multiPackFlag = 0, datalen = 0;
     uint8_t recvBuff[600] = {0};
-    uint8_t bt_status = 0, enc_state = 0, cnt = 0, brush_face = 0, brush_tip = 1;
+    uint32_t bt_status = 0, enc_state = 0, cnt = 0, brush_face = 0, brush_tip = 1;
     int ret = -1, btStatus = 0, notifyCnt = 0, recvLen = 0, brushBarCnt = 1;
     uint8_t mode = LE_PAIRING_SEC_CONNECT_NUMERIC, encStatus = 0;
     uint8_t param[8] = {0x06, 0x00, 0x0c, 0x00, 0x00, 0x00, 0x2c, 0x01};
@@ -276,10 +273,12 @@ static int activeDevice(void) {
     status = STAT_BT_INIT;
 
     ret = gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_TIPS),
-                        TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                        TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
     if (ret != EVENT_OK && ret != EVENT_KEY_F1) {
         return KEY_EVENT_BACK;
     }
+
+    ddi_bt_ioctl(DDI_BT_CTL_SET_BLE_PAIRING_MODE, (uint32_t) &mode, 0);
 
     while (1) {
         ddi_key_read(&key);
@@ -304,13 +303,14 @@ static int activeDevice(void) {
                 db_msg("STAT_BT_INIT");
                 status = STAT_BT_START_PAIRING;
                 brush_face = 1;
+                Global_Ble_Process_Step = STAT_BLE_STEP_1;
                 break;
 
             case STAT_BT_START_PAIRING:
                 btStatus = ddi_bt_get_status();
                 if (btStatus == BT_STATUS_CONNECTED) {
-                    //ret = ddi_bt_ioctl(DDI_BT_CTL_BLE_UPDATE_CONN_PARAM, (uint32_t) param, 0);
-                    //db_msg("update conn param ret:%d", ret);
+                    ret = ddi_bt_ioctl(DDI_BT_CTL_BLE_UPDATE_CONN_PARAM, (uint32_t) param, 0);
+                    db_msg("update conn param ret:%d", ret);
                     status = STAT_BT_ENCRY_STATE;
                 }
                 break;
@@ -323,13 +323,12 @@ static int activeDevice(void) {
                     ddi_sys_msleep(1000);
                     ddi_sys_get_tick(&notifyTick);
                     respCommonNotify(DEVICE_READY);
+                    Global_Ble_Process_Step = STAT_BLE_STEP_2;
                     notifyCnt = 0;
                     cnt = 0;
                 } else {
                     cnt++;
                     if (cnt > PROC_BLE_GET_ENC_STATE_CNT) {
-                        uint8_t mode = LE_PAIRING_SEC_CONNECT_NUMERIC;
-                        ddi_bt_ioctl(DDI_BT_CTL_SET_BLE_PAIRING_MODE, (uint32_t) &mode, 0);
                         ddi_bt_ioctl(DDI_BT_CTL_BLE_START_PAIRING, 0, 0);
                         status = STAT_BT_DISP_CONFIRM_KEY;
                         cnt = 0;
@@ -362,7 +361,6 @@ static int activeDevice(void) {
 
             case STAT_BT_GET_CONFIRM_KEY_STAT:
                 ret = ddi_bt_ioctl(DDI_BT_CTL_GET_STATUS, 0, 0);
-                db_msg("ret:%d, cnt:%d", ret, cnt);
                 if (ret == BT_BNEP_BLE_PAIR) {
                     status = STAT_BT_GET_ENCRY_STATE;
                     cnt = 0;
@@ -370,9 +368,10 @@ static int activeDevice(void) {
                     cnt++;
                 }
                 btStatus = ddi_bt_get_status();
+                db_msg("ret:%d, cnt:%d, btStatus:%d", ret, cnt, btStatus);
                 if (cnt > PROC_BLE_CONFIRM_PAIR_STATE_CNT || btStatus != BT_STATUS_CONNECTED) {
                     gui_disp_info(res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TITLE),
-                                  res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TIPS), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER,
+                                  res_getLabel(LANG_LABEL_BT_CONNECT_FAIL_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                   NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     status = STAT_BT_INIT;
                     cnt = 0;
@@ -386,6 +385,7 @@ static int activeDevice(void) {
                     status = STAT_DATA_RECV;
                     ddi_sys_get_tick(&notifyTick);
                     respCommonNotify(DEVICE_READY);
+                    Global_Ble_Process_Step = STAT_BLE_STEP_2;
                     notifyCnt = 0;
                     cnt = 0;
                 } else {
@@ -394,6 +394,7 @@ static int activeDevice(void) {
                         status = STAT_DATA_RECV;
                         ddi_sys_get_tick(&notifyTick);
                         respCommonNotify(DEVICE_READY);
+                        Global_Ble_Process_Step = STAT_BLE_STEP_2;
                         notifyCnt = 0;
                         cnt = 0;
                     }
@@ -431,6 +432,7 @@ static int activeDevice(void) {
                             respCommonNotify(DEVICE_READY);
                             ddi_sys_get_tick(&notifyTick);
                             notifyCnt++;
+                            Global_Ble_Process_Step = STAT_BLE_STEP_2 + notifyCnt;
                         }
                     }
                 }
@@ -444,7 +446,7 @@ static int activeDevice(void) {
             case STAT_TRANS_SIGN:
                 ret = procActiveDevice();
                 if (ret < 0) {
-                    gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_FAIL_TIPS), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
+                    gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_FAIL_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                                   EVENT_NONE);
                     ddi_bt_disconnect();
                     return -1;
@@ -452,7 +454,7 @@ static int activeDevice(void) {
                     status = STAT_DATA_RECV;
                 } else if (ret == DEVICE_ACTIVE_REQUEST_DATA) {
                     ddi_bt_close();
-                    gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_SUCCESS_TIPS), TEXT_ALIGN_LEFT, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+                    gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_SUCCESS_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                     return 0;
                 }
                 break;
@@ -487,7 +489,7 @@ static int guiSaveWalletName(void) {
         } else if (ret == 0) {
             snprintf(confirm_msg, sizeof(confirm_msg), res_getLabel(LANG_LABEL_WALLET_NAME_CONFIRM), result);
             db_msg("confirm_msg:%s", confirm_msg);
-            ret = gui_disp_info(res_getLabel(LANG_LABEL_NAME_WALLET), confirm_msg, TEXT_ALIGN_LEFT,
+            ret = gui_disp_info(res_getLabel(LANG_LABEL_NAME_WALLET), confirm_msg, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                 res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
             if (ret == EVENT_CANCEL) {
                 continue;
@@ -509,7 +511,7 @@ static int guiSaveWalletName(void) {
 static int showMnemonicsWillChangeAlert(void) {
     int ret = 0;
     do {
-        ret = gui_disp_info(res_getLabel(LANG_LABEL_ALERT), res_getLabel(LANG_LABEL_RE_CREAT_MNEMONIC_TIPS), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_ALERT), res_getLabel(LANG_LABEL_RE_CREAT_MNEMONIC_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                             res_getLabel(LANG_LABEL_SUBMENU_OK), 1);
         if (ret == EVENT_CANCEL) {
             return 0;
@@ -701,7 +703,7 @@ static int enterPassword(unsigned char passhash[PASSWD_HASHED_LEN]) {
         }
         if (memcmp(passhash, new_passhash, PASSWD_HASHED_LEN) != 0) {
             db_error("passswd hash compare false");
-            gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_TITLE), res_getLabel(LANG_LABEL_CHANGE_PIN_FAIL_TIPS), TEXT_ALIGN_CENTER, NULL,
+            gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_TITLE), res_getLabel(LANG_LABEL_CHANGE_PIN_FAIL_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                           res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
             continue;
         } else {
@@ -917,7 +919,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
             ret = mnemonic_check(mnemonics);
             db_secure("mnemonic check ret:%d", ret);
             if (!ret) {
-                ret = dialog(0, res_getLabel(LANG_LABEL_ITEM_VERIFY), DIALOG_ICON_STYLE_ERR, res_getLabel(LANG_LABEL_INVALID_MNEMONIC_SPELLING),
+                ret = dialog(0, res_getLabel(LANG_LABEL_INVALID_MNEMONIC), DIALOG_ICON_STYLE_ERR, res_getLabel(LANG_LABEL_INVALID_MNEMONIC_SPELLING),
                              DIALOG_BUTTON_ALIGN_CENTER, NULL, NULL, 0);
                 if (ret == EVENT_CANCEL) {
                     index = mlen - 1;
@@ -937,7 +939,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
                     if (verify_ret == 1) {
                         ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_VERIFY),
                                             res_getLabel(LANG_LABEL_VERIFY_FAIL_ASK),
-                                            TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                             res_getLabel(LANG_LABEL_SUBMENU_OK), eventType);
                         if (ret == EVENT_OK) {
                             int pret = guideEnterPassphrase(passphrase_val, sizeof(passphrase_val));
@@ -965,7 +967,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
                             ret = gui_disp_info(res_getLabel(LANG_LABEL_INVALID_MNEMONIC),
                                                 passphrase_val[0] ? res_getLabel(LANG_LABEL_VERIFY_PASSPHRASE_FAIL)
                                                                   : res_getLabel(LANG_LABEL_CHECK_MNEMONIC),
-                                                TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                                TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                                 res_getLabel(LANG_LABEL_SUBMENU_OK), eventType);
                             if (ret == EVENT_KEY_F1) {
                                 err = RETURN_DISP_MAINPANEL;
@@ -991,7 +993,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
                         ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_VERIFY),
                                             passphrase_val[0] ? res_getLabel(LANG_LABEL_VERIFY_PASSPHRASE_SUCCESS)
                                                               : res_getLabel(LANG_LABEL_VERIFY_SUCCESS),
-                                            TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                             res_getLabel(LANG_LABEL_SUBMENU_OK), eventType);
                         if (ret == EVENT_KEY_F1) {
                             err = RETURN_DISP_MAINPANEL;
@@ -1022,6 +1024,40 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
     return 0;
 }
 
+static int showAboutWalletSimple(void) {
+    char str[128], sn[24];
+    int ret = 0, os_verison;
+    int width = 0;
+
+    dwin_init();
+
+    //version
+    os_verison = ddi_sys_get_firmware_ver(OS_VER);
+    memset(str, 0x0, sizeof(str));
+    snprintf(str, sizeof(str), "%s: %s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_verison);
+    width = ddi_lcd_get_text_width(str);
+    if (width > g_gui_info.uiScrWidth) {
+        snprintf(str, sizeof(str), "%s:\n%s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_verison);
+    }
+    SetWindowMText(0, str);
+
+    //sn
+    memset(sn, 0x0, sizeof(sn));
+    device_get_sn(sn, 24);
+    memset(str, 0x0, sizeof(str));
+    snprintf(str, sizeof(str), "%s: %s", res_getLabel(LANG_LABEL_DEVICE_SN), sn);
+    width = ddi_lcd_get_text_width(str);
+    if (width > g_gui_info.uiScrWidth) {
+        snprintf(str, sizeof(str), "%s:\n%s", res_getLabel(LANG_LABEL_DEVICE_SN), sn);
+    }
+    SetWindowMText(0, str);
+
+    ret = ShowWindowTxt(res_getLabel(LANG_LABEL_SET_ITEM_ABOUT), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));
+    dwin_destory();
+
+    return ret;
+}
+
 int startGuide(void) {
     db_msg("startGuide");
     int nextIndex = GUIDE_INDEX_LANG;
@@ -1047,7 +1083,7 @@ int startGuide(void) {
 
         switch (nextIndex) {
             case GUIDE_INDEX_LANG: {
-                ret = setupLang(LANG_NOT_SHOW_BACK_ICON);
+                ret = setupLang(LANG_SHOW_ABOUT_WITH_BACK_ICON);
                 if (Global_Guide_abort) {
                     db_error("Global_Guide_abort goto setting");
                     //changeWindow(WINDOWID_SETTING);
@@ -1059,11 +1095,13 @@ int startGuide(void) {
                     } else {
                         pushData(stack, GUIDE_INDEX_GREET);
                     }
+                } else if (ret == KEY_EVENT_BACK) {
+                    showAboutWalletSimple();
                 }
             }
                 break;
             case GUIDE_DEVICE_ACTIVE_DOWNLOAD_APP_TIPS: {
-                ret = gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_ACTIVATE_DOWNLOAD_APP_TIPS), TEXT_ALIGN_LEFT,
+                ret = gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_ACTIVATE_DOWNLOAD_APP_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                     res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     ret = KEY_EVENT_BACK;
@@ -1101,7 +1139,7 @@ int startGuide(void) {
             }
                 break;
             case GUIDE_INDEX_GREET: {
-                ret = gui_disp_info("SafePal X1", res_getLabel(LANG_LABEL_GUIDE_GREET), TEXT_ALIGN_LEFT,
+                ret = gui_disp_info("SafePal X1", res_getLabel(LANG_LABEL_GUIDE_GREET), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                     res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     ret = KEY_EVENT_BACK;
@@ -1149,7 +1187,7 @@ int startGuide(void) {
                 break;
             case GUIDE_INDEX_MNEMONICS_DETAIL_TIPS: {
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_MNEMONIC_IS_WHAT),
-                                    res_getLabel(LANG_LABEL_MNEMONIC_IS_WHAT_TIPS), TEXT_ALIGN_LEFT,
+                                    res_getLabel(LANG_LABEL_MNEMONIC_IS_WHAT_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                     res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     ret = KEY_EVENT_BACK;
@@ -1241,7 +1279,7 @@ int startGuide(void) {
             case GUIDE_INDEX_MNEMONICS_CONFIRM_TIPS: {
                 set_temp_screen_time(DEFAULT_HI_SCREEN_SAVER_TIME);
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_MNEMONIC_VERIFY_TITLE),
-                                    res_getLabel(LANG_LABEL_MNEMONIC_VERIFY_TIPS), TEXT_ALIGN_LEFT,
+                                    res_getLabel(LANG_LABEL_MNEMONIC_VERIFY_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                     res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     ret = KEY_EVENT_BACK;
@@ -1272,11 +1310,11 @@ int startGuide(void) {
             case GUIDE_INDEX_MNEMONICS_CONFIRM_OK_TIPS: {
                 set_temp_screen_time(DEFAULT_HI_SCREEN_SAVER_TIME);
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_MNEMONICS_CONFIRM_OK_TITLE),
-                                    res_getLabel(LANG_LABEL_MNEMONICS_CONFIRM_OK_TIPS), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
+                                    res_getLabel(LANG_LABEL_MNEMONICS_CONFIRM_OK_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                     res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     ret = gui_disp_info(res_getLabel(LANG_LABEL_ALERT), res_getLabel(LANG_LABEL_RE_VERIFY_MNEMONIC_TIPS),
-                                        TEXT_ALIGN_CENTER,
+                                        TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                         res_getLabel(LANG_LABEL_BACK),
                                         res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                     if (ret == EVENT_OK) {
@@ -1293,7 +1331,7 @@ int startGuide(void) {
             case GUIDE_INDEX_PASSWD_TIPS: {
                 set_temp_screen_time(DEFAULT_HI_SCREEN_SAVER_TIME);
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_SET_PIN_TITLE), res_getLabel(LANG_LABEL_SET_PIN_TIPS),
-                                    TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
+                                    TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                     res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 if (ret == EVENT_CANCEL) {
                     popData(stack);
@@ -1391,7 +1429,7 @@ int startGuide(void) {
                 break;
             case GUIDE_INDEX_DOWNLOAD_APP_TIPS: {
                 gui_disp_info(res_getLabel(LANG_LABEL_DOWNLOAD_APP_TITLE), res_getLabel(LANG_LABEL_DOWNLOAD_APP_TIPS),
-                              TEXT_ALIGN_LEFT, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+                              TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 nextIndex = GUIDE_INDEX_MAX;
                 guideDone = 1;
             }

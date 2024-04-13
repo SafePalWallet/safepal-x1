@@ -27,6 +27,8 @@ int ddi_sys_get_machtype(void);
 
 int ddi_sys_cmd(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 
+uint32_t get_diff_tick(uint32_t cur_tick, uint32_t prior_tick);
+
 int ddi_utils_stimer_query(uint32_t stimer, uint32_t timout_ms);
 
 void *ddi_mem_malloc(uint32_t size);
@@ -57,6 +59,8 @@ int ddi_vfs_remove(const char *lpFileName);
 
 int ddi_vfs_rename(const char *lpOldName, const char *lpNewName);
 
+int ddi_vfs_filesize(const char *lpName);
+
 int ddi_vfs_access(const char *lpName);
 
 int ddi_vfs_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
@@ -75,15 +79,11 @@ int ddi_lcd_open(void);
 
 int ddi_lcd_close(void);
 
-int ddi_lcd_fill_rect(const strRect *lpstrRect, uint32_t nRGB);
-
 int ddi_lcd_clear_rect(const strRect *lpstrRect);
 
-int ddi_lcd_show_text(uint32_t nX, uint32_t nY, const uint8_t *lpText);
+int ddi_lcd_show_text(uint32_t nX, uint32_t nY, const char *lpText);
 
 int ddi_lcd_show_picture(const strRect *lpstrRect, const strPicture *lpstrPic);
-
-int ddi_lcd_show_pixel(uint32_t nX, uint32_t nY);
 
 int ddi_lcd_show_pixel_ex(uint32_t nX, uint32_t nY);
 
@@ -91,23 +91,21 @@ int ddi_lcd_show_line(const strLine *lpstrLine);
 
 int ddi_lcd_show_rect(const strRect *lpstrRect);
 
-int ddi_lcd_extract_rect(const strRect *lpstrRect, strPicture *lpstrPic);
-
 void ddi_lcd_brush(const strRect *lpstrRect);
 
 void ddi_lcd_brush_screen(void);
 
 int ddi_lcd_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 
-strPicture *ddi_lcd_bmp_open(const char *lpBmpName);
-
-int ddi_lcd_bmp_close(strPicture *lpstrPic);
-
 int ddi_lcd_clear_screen(void);
 
 int ddi_lcd_fill_row_ram(uint32_t nRow, uint32_t nCol, const char *lpText, uint32_t flag);
 
 int ddi_lcd_clear_row(uint32_t nRow);
+
+int ddi_lcd_get_text_width(const char *lpText);
+
+int ddi_lcd_get_buffer_width(const char *lpText, int size);
 
 int ddi_key_open(void);
 
@@ -157,7 +155,7 @@ int ddi_sec_calc_md5(uint8_t *pData, uint32_t dataLen, uint8_t *pMd5Value);
 
 int ddi_sec_get_randnum(uint8_t *pData, uint32_t dataLen);
 
-int ddi_sec_get_chipid(uint8_t *pData, int size);
+int ddi_sec_get_cpuid(uint8_t *pData, int size);
 
 int ddi_sec_rsa_sk_enc(uint8_t *pskey, uint8_t *pdata, uint32_t datalen, uint8_t *poutdata, uint32_t *poutlen);
 
@@ -185,9 +183,11 @@ int ddi_soft_timer_is_timeout(uint16_t id);
 
 void ddi_soft_timer_stop(uint16_t id);
 
-int ddi_flash_write(uint32_t addr, uint8_t *data, uint32_t size);
+int ddi_flash_write(uint32_t addr, const uint8_t *data, uint32_t size);
 
 int ddi_flash_read(uint32_t addr, uint8_t *data, uint32_t size);
+
+int ddi_flash_sector_erase(uint32_t addr);
 
 int ddi_flash_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 

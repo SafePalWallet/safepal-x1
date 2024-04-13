@@ -150,7 +150,7 @@ static int resetDevice(int param) {
 
     do {
         ret = gui_disp_info(res_getLabel(LANG_LABEL_MENU_RESET), res_getLabel(LANG_LABEL_RESET_BACKUP_TIPS),
-                           TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
+                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                            EVENT_KEY_F1);
         if (ret == EVENT_CANCEL) {
             return ret;
@@ -162,7 +162,7 @@ static int resetDevice(int param) {
         }
 
         ret = gui_disp_info(res_getLabel(LANG_LABEL_MENU_RESET), res_getLabel(LANG_LABEL_MENU_RESET_TIPS),
-                           TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
+                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                            EVENT_KEY_F1);
         if (ret == EVENT_CANCEL) {
             continue;
@@ -339,7 +339,7 @@ static int changePassword(int param) {
                         step++;
                     } else {
                         ret = gui_disp_info(res_getLabel(LANG_LABEL_SET_ITEM_CHANGE_PASSWD),
-                                           res_getLabel(LANG_LABEL_CHANGE_PIN_FAIL_TIPS), TEXT_ALIGN_CENTER, NULL,
+                                            res_getLabel(LANG_LABEL_CHANGE_PIN_FAIL_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                            res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                         if (ret == EVENT_KEY_F1) {
                             return RETURN_DISP_MAINPANEL;
@@ -361,7 +361,7 @@ static int changePassword(int param) {
                 if (!ret) {
                     ret = gui_disp_info(res_getLabel(LANG_LABEL_SET_ITEM_CHANGE_PASSWD),
                                        res_getLabel(LANG_LABEL_CHANGE_PIN_SUCCESS_TIPS),
-                                       TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL,
+                                       TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                        res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     //ddi_bt_ioctl(DDI_BT_CTL_BLE_CLEAR_FIFO, 0, 0);
                     if (ret == EVENT_KEY_F1) {
@@ -395,7 +395,7 @@ static int changePassword(int param) {
     return err ? -1 : 0;
 }
 
-static int showAboutWallet(void) {
+int showAboutWallet(void) {
     char str[128], blename[32], sn[24];
     char device_name[32];
     int ret = 0, os_verison;
@@ -455,11 +455,9 @@ static int showAboutWallet(void) {
     ddi_flash_read(YC_INFOR_ADDR, (uint8_t *) &bt_flash_info, sizeof(bt_flash_info));
     if ((bt_flash_info.flag == BT_INFOR_FLAG) && (!is_empty_string(bt_flash_info.ble_name))) {
         memcpy(blename, bt_flash_info.ble_name, sizeof(bt_flash_info.ble_name));
-    } else {
-        ddi_bt_ioctl(DDI_BT_CTL_RNAME, CTRL_BLE_NAME_TYPE, (uint32_t) blename);
     }
     memset(str, 0x0, sizeof(str));
-    snprintf(str, sizeof(str), "BLE: %s", blename);
+    snprintf(str, sizeof(str), "%s: %s", res_getLabel(LANG_LABEL_DEVICE), blename);
     SetWindowMText(0, str);
 
     //active time
@@ -614,11 +612,11 @@ static int updateFirmware(void) {
             } else {
                 tips = "Invalid firmware.";
             }
-            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER,
+            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                           res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
         } else {
             db_msg("prepare upgrade OK,t:%d", t);
-            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), res_getLabel(LANG_LABEL_FOUND_FW_TIPS), TEXT_ALIGN_LEFT, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), res_getLabel(LANG_LABEL_FOUND_FW_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
             if (gHaveSeed) {
                 if (checkPasswdKeyboard(0, res_getLabel(LANG_LABEL_ENTER_PASSWD),
                                         PASSKB_FLAG_RANDOM | PASSKB_FLAG_NOT_SWITCH_GUIDE) != 0) {
@@ -641,7 +639,7 @@ static int updateFirmware(void) {
                 settings_save(SETTING_KEY_OTA_PRE_VERSION, 0);
                 char buff[48] = {0};
                 snprintf(buff, sizeof(buff), "Upgrade failed(%d).", ret);
-                gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), buff, TEXT_ALIGN_CENTER|TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), buff, TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                               res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 break;
             }

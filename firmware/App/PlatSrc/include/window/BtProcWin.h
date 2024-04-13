@@ -25,11 +25,21 @@ enum bt_status {
     STAT_BT_GET_CONFIRM_KEY_STAT,
     STAT_BT_GET_ENCRY_STATE,
     STAT_DATA_RECV,
-    STAT_DATA_HANDLE,
     STAT_TRANS_PROC,
-    STAT_TRANS_SIGN,
     STAT_DATA_SEND,
+    STAT_TRANS_SIGN,
     STAT_ERR_RSP,
+    STAT_BT_MAX,
+};
+
+enum ble_process_step {
+    STAT_BLE_STEP_1 = 0,
+    STAT_BLE_STEP_2,
+    STAT_BLE_STEP_3,
+    STAT_BLE_STEP_4,
+    STAT_BLE_STEP_5,
+    STAT_BLE_STEP_6,
+    STAT_BLE_MAX,
 };
 
 typedef struct {

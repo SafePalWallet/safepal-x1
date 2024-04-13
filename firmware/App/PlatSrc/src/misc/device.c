@@ -32,10 +32,11 @@
 #define PRIVATE_DATA_BACKUP_MAXSIZE      (4*1024UL)
 
 //PRIVATE_DATA_BASE_AREA
-//  user active(128) |  settings (128) | seed info(32)
+//  user active(128) |  settings (128) | seed info(32) | mnemonic entropy(64)
 #define NVM_ADDR_USER_ACTIVE_OFFSET (NVM_ADDR_BASE + 0)
 #define NVM_ADDR_SETTINGS_OFFSET    (NVM_ADDR_BASE + 128)
 #define NVM_ADDR_SEED_INFO_OFFSET   (NVM_ADDR_BASE + 128 + 128)
+#define NVM_ADDR_MM_ENTROPY_OFFSET  (NVM_ADDR_BASE + 128 + 128 + 32)
 
 #define FILE_HASH_SIZE 20
 
@@ -1056,8 +1057,30 @@ int device_save_settings(const unsigned char *data, int size) {
     return writeEncryptNvmData(NVM_ADDR_SETTINGS_OFFSET, data, size, 0, 0);
 }
 
+int device_read_mnemonic_entropy(unsigned char *data, int size) {
+    int ret = readEncryptNvmData(NVM_ADDR_MM_ENTROPY_OFFSET, data, size, 0);
+    if (ret != 55 || (*data + 1 != ret)) {
+        db_error("invalid size:%d", ret);
+        return -1;
+    }
+    return ret;
+}
+
+int device_save_mnemonic_entropy(const unsigned char *data, int size) {
+    if (size == 0) {
+        clearNvmData(NVM_ADDR_MM_ENTROPY_OFFSET, 55, 0);
+        return 0;
+    }
+    if (size != 55 || (*data + 1 != size)) {
+        db_error("invalid size:%d", size);
+        return -1;
+    }
+    return writeEncryptNvmData(NVM_ADDR_MM_ENTROPY_OFFSET, data, size, 0, 1);
+}
+
 int device_clean_all_info(void) {
     clearNvmData(NVM_ADDR_SETTINGS_OFFSET, 128, 0);
     device_save_seed_account(0);
+    device_save_mnemonic_entropy(NULL, 0);
     return 0;
 }

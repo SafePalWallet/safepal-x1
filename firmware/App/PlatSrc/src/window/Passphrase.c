@@ -62,7 +62,7 @@ int saveWalletName(const char *passphrase) {
         }
 
         snprintf(confirm_msg, sizeof(confirm_msg), "%s:%s", res_getLabel(LANG_LABEL_ORIGINAL_WALLET_NAME), wallet_name);
-        gui_disp_info(res_getLabel(LANG_LABEL_WALLET_IS_SWITCHED), confirm_msg, TEXT_ALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
+        gui_disp_info(res_getLabel(LANG_LABEL_WALLET_IS_SWITCHED), confirm_msg, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
                      EVENT_KEY_F1);
         return 0;
     }
@@ -79,13 +79,13 @@ int saveWalletName(const char *passphrase) {
             return ret;
         } else if (ret == OPER_OK) {
             if (is_not_empty_string(passphrase) && strcmp(result, passphrase) == 0) {
-                gui_disp_info("Invalid Wallet Name", res_getLabel(LANG_LABEL_NAME_EQUAL_PASSPHRASE), TEXT_ALIGN_CENTER,
-                             NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+                gui_disp_info(res_getLabel(LANG_LABEL_INVALID_WALLET_NAME), res_getLabel(LANG_LABEL_NAME_EQUAL_PASSPHRASE), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
+                              NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
                 continue;
             }
             memzero(confirm_msg, sizeof(confirm_msg));
             snprintf(confirm_msg, sizeof(confirm_msg), res_getLabel(LANG_LABEL_WALLET_NAME_CONFIRM), result);
-            ret = gui_disp_info("Passphrase", confirm_msg, TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+            ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_PASSPHRASE), confirm_msg, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
             if (ret == EVENT_CANCEL) {
                 continue;
@@ -97,7 +97,7 @@ int saveWalletName(const char *passphrase) {
                 }
                 storage_set_account_name(account, result, strlen(result));
                 snprintf(confirm_msg, sizeof(confirm_msg), res_getLabel(LANG_LABEL_WALLET_SWITCHED), result);
-                gui_disp_info("Passphrase", confirm_msg, TEXT_ALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
+                gui_disp_info(res_getLabel(LANG_LABEL_ITEM_PASSPHRASE), confirm_msg, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
                              EVENT_NONE);
                 done = 1;
             }
@@ -221,7 +221,7 @@ static int enterPassphrase(char *passphrase, int size) {
                 db_msg("check passphrase ret:%d", ret);
                 if (ret) {
                     ret = dialog_l(0,
-                             "Passphrase",
+                             "Error",
                              DIALOG_ICON_STYLE_NONE,
                              ret > 0 ? res_getLabel(LANG_LABEL_PASSPHRASE_INVALID_TIPS0 + ret - 1)
                                      : "Invalid Passphrase",
@@ -240,7 +240,7 @@ static int enterPassphrase(char *passphrase, int size) {
                 if (strlen(result1) <= 0 || strcmp(result1, result2) != 0) {
                     ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_PASSPHRASE),
                                        res_getLabel(LANG_LABEL_INPUT_DIFFERENT),
-                                       TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL,
+                                       TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                        res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     input_time = 0;
                     memzero(result1, sizeof(result1));
@@ -254,7 +254,7 @@ static int enterPassphrase(char *passphrase, int size) {
                 memset(tips, 0x0, sizeof(tips));
                 snprintf(tips, sizeof(tips), "Passphrase is \"%s\".", result);
                 ret = gui_disp_info(res_getLabel(LANG_LABEL_ITEM_PASSPHRASE), tips,
-                                   TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                   TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                    res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                 if (ret == EVENT_OK) {
                     done = 1;

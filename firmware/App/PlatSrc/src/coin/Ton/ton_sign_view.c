@@ -117,9 +117,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 		view_add_txt(0, "Data:");
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
-        memset(tmpbuf, 0x0, sizeof(tmpbuf));
-        omit_string(tmpbuf, msg->action.dapp.message, 52, 20);
-        view_add_txt(0, tmpbuf);
+        view_add_txt(0, msg->action.dapp.content);
     } else  if ((char) msg->operation_type == TON_MSG) {
 		view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 
@@ -136,7 +134,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, tmpbuf);
     }
 
-    if (!is_empty_string(msg->action.sendCoins.payload)) {
+    if ((char) msg->operation_type == TON_TRANSFER && !is_empty_string(msg->action.sendCoins.payload)) {
 		db_msg("memo:%s", msg->action.sendCoins.payload);
         view->total_height = 3 * SCREEN_HEIGHT;
         if (is_printable_str(msg->action.sendCoins.payload)) {

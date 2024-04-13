@@ -72,27 +72,24 @@ void init_ddi_item(const ddi_cmd_item *items) {
 
     fetch_ddi_p(flash, flash_write);
     fetch_ddi_p(flash, flash_read);
+    fetch_ddi_p(flash, flash_sector_erase);
     fetch_ddi_p(flash, flash_ioctl);
 
     fetch_ddi_p(lcd, lcd_open);
     fetch_ddi_p(lcd, lcd_close);
-    fetch_ddi_p(lcd, lcd_fill_rect);
     fetch_ddi_p(lcd, lcd_clear_rect);
     fetch_ddi_p(lcd, lcd_show_text);
-    fetch_ddi_p(lcd, lcd_bmp_open);
-    fetch_ddi_p(lcd, lcd_bmp_close);
     fetch_ddi_p(lcd, lcd_show_picture);
-    fetch_ddi_p(lcd, lcd_show_pixel);
     fetch_ddi_p(lcd, lcd_show_pixel_ex);
     fetch_ddi_p(lcd, lcd_show_line);
     fetch_ddi_p(lcd, lcd_show_rect);
-    fetch_ddi_p(lcd, lcd_extract_rect);
     fetch_ddi_p(lcd, lcd_brush);
     fetch_ddi_p(lcd, lcd_brush_screen);
     fetch_ddi_p(lcd, lcd_ioctl);
     fetch_ddi_p(lcd, lcd_clear_screen);
     fetch_ddi_p(lcd, lcd_fill_row_ram);
     fetch_ddi_p(lcd, lcd_clear_row);
+    fetch_ddi_p(lcd, lcd_get_text_width);
 
     fetch_ddi_p(gkey, key_open);
     fetch_ddi_p(gkey, key_clear);
@@ -153,13 +150,13 @@ void init_ddi_item(const ddi_cmd_item *items) {
     fetch_ddi_p(vfs, vfs_tell);
     fetch_ddi_p(vfs, vfs_remove);
     fetch_ddi_p(vfs, vfs_rename);
-    fetch_ddi_p(vfs, vfs_access);
+    fetch_ddi_p(vfs, vfs_filesize);
     fetch_ddi_p(vfs, vfs_ioctl);
 
     fetch_ddi_p(ota, ota_prepare);
     fetch_ddi_p(ota, ota_upgrade);
     fetch_ddi_p(ota, ota_ioctl);
-	
+
     fetch_ddi_p(soft_timer, soft_timer_start);
     fetch_ddi_p(soft_timer, soft_timer_get_state);
     fetch_ddi_p(soft_timer, soft_timer_is_timeout);
@@ -210,12 +207,16 @@ int ddi_sys_cmd(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {
     return gsys->sys_cmd(nCmd, lParam, wParam);
 }
 
-int ddi_flash_write(uint32_t addr, uint8_t *data, uint32_t size) {
+int ddi_flash_write(uint32_t addr, const uint8_t *data, uint32_t size) {
     return flash->flash_write(addr, data, size);
 }
 
 int ddi_flash_read(uint32_t addr, uint8_t *data, uint32_t size) {
     return flash->flash_read(addr, data, size);
+}
+
+int ddi_flash_sector_erase(uint32_t addr) {
+    return flash->flash_sector_erase(addr);
 }
 
 int ddi_flash_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {
@@ -230,24 +231,16 @@ int ddi_lcd_close(void) {
     return lcd->lcd_close();
 }
 
-int ddi_lcd_fill_rect(const strRect *lpstrRect, uint32_t nRGB) {
-    return lcd->lcd_fill_rect(lpstrRect, nRGB);
-}
-
 int ddi_lcd_clear_rect(const strRect *lpstrRect) {
     return lcd->lcd_clear_rect(lpstrRect);
 }
 
-int ddi_lcd_show_text(uint32_t nX, uint32_t nY, const uint8_t *lpText) {
+int ddi_lcd_show_text(uint32_t nX, uint32_t nY, const char *lpText) {
     return lcd->lcd_show_text(nX, nY, lpText);
 }
 
 int ddi_lcd_show_picture(const strRect *lpstrRect, const strPicture *lpstrPic) {
     return lcd->lcd_show_picture(lpstrRect, lpstrPic);
-}
-
-int ddi_lcd_show_pixel(uint32_t nX, uint32_t nY) {
-    return lcd->lcd_show_pixel(nX, nY);
 }
 
 int ddi_lcd_show_pixel_ex(uint32_t nX, uint32_t nY) {
@@ -262,10 +255,6 @@ int ddi_lcd_show_rect(const strRect *lpstrRect) {
     return lcd->lcd_show_rect(lpstrRect);
 }
 
-int ddi_lcd_extract_rect(const strRect *lpstrRect, strPicture *lpstrPic) {
-    return lcd->lcd_extract_rect(lpstrRect, lpstrPic);
-}
-
 void ddi_lcd_brush(const strRect *lpstrRect) {
     return lcd->lcd_brush(lpstrRect);
 }
@@ -278,14 +267,6 @@ int ddi_lcd_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {
     return lcd->lcd_ioctl(nCmd, lParam, wParam);
 }
 
-strPicture *ddi_lcd_bmp_open(const char *lpBmpName) {
-    return lcd->lcd_bmp_open(lpBmpName);
-}
-
-int ddi_lcd_bmp_close(strPicture *lpstrPic) {
-    return lcd->lcd_bmp_close(lpstrPic);
-}
-
 int ddi_lcd_clear_screen(void) {
     return lcd->lcd_clear_screen();
 }
@@ -296,6 +277,14 @@ int ddi_lcd_fill_row_ram(uint32_t nRow, uint32_t nCol, const char *lpText, uint3
 
 int ddi_lcd_clear_row(uint32_t nRow) {
     return lcd->lcd_clear_row(nRow);
+}
+
+int ddi_lcd_get_text_width(const char *lpText) {
+    return lcd->lcd_get_text_width(lpText, 0);
+}
+
+int ddi_lcd_get_buffer_width(const char *lpText, int size) {
+    return lcd->lcd_get_text_width(lpText, size);
 }
 
 void DealPowerOff(void) {
@@ -415,7 +404,7 @@ int ddi_sec_get_randnum(uint8_t *pData, uint32_t dataLen) {
     return sec->get_randnum(pData, dataLen);
 }
 
-int ddi_sec_get_chipid(uint8_t *pData, int size) {
+int ddi_sec_get_cpuid(uint8_t *pData, int size) {
     return sec->get_cpuid(pData, size);
 }
 
@@ -523,7 +512,7 @@ int ddi_uart_ioctl(uint32_t nCom, uint32_t nCmd, uint32_t lParam, uint32_t wPara
     return uart->uart_ioctl(nCom, nCmd, lParam, wParam);
 }
 
-static uint32_t get_diff_tick(uint32_t cur_tick, uint32_t prior_tick) {
+uint32_t get_diff_tick(uint32_t cur_tick, uint32_t prior_tick) {
     if (cur_tick < prior_tick) {
         return (cur_tick + (~prior_tick));
     } else {
@@ -601,8 +590,13 @@ int ddi_vfs_rename(const char *lpOldName, const char *lpNewName) {
     return vfs->vfs_rename(lpOldName, lpNewName);
 }
 
+int ddi_vfs_filesize(const char *lpName) {
+    return vfs->vfs_filesize(lpName);
+}
+
 int ddi_vfs_access(const char *lpName) {
-    return vfs->vfs_access(lpName);
+    int ret = ddi_vfs_filesize(lpName);
+    return ret >= 0 ? 0 : ret;
 }
 
 int ddi_vfs_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {

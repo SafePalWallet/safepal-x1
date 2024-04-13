@@ -66,7 +66,7 @@ typedef struct {
 
     int (*vfs_rename)(const char *lpOldName, const char *lpNewName);
 
-    int (*vfs_access)(const char *lpName);
+    int (*vfs_filesize)(const char *lpName);
 
     int (*vfs_ioctl)(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 } ddi_vfs_list_t;
@@ -88,9 +88,11 @@ typedef struct {
 } ddi_bt_list_t;
 
 typedef struct {
-    int (*flash_write)(uint32_t addr, uint8_t *data, uint32_t size);
+    int (*flash_write)(uint32_t addr, const uint8_t *data, uint32_t size);
 
     int (*flash_read)(uint32_t addr, uint8_t *data, uint32_t size);
+
+    int (*flash_sector_erase)(uint32_t addr);
 
     int (*flash_ioctl)(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 } ddi_flash_list_t;
@@ -100,27 +102,17 @@ typedef struct {
 
     int (*lcd_close)(void);
 
-    int (*lcd_fill_rect)(const strRect *lpstrRect, uint32_t nRGB);
-
     int (*lcd_clear_rect)(const strRect *lpstrRect);
 
-    int (*lcd_show_text)(uint32_t nX, uint32_t nY, const uint8_t *lpText);
-
-    strPicture *(*lcd_bmp_open)(const char *lpBmpName);
-
-    int (*lcd_bmp_close)(strPicture *lpstrPic);
+    int (*lcd_show_text)(uint32_t nX, uint32_t nY, const char *lpText);
 
     int (*lcd_show_picture)(const strRect *lpstrRect, const strPicture *lpstrPic);
-
-    int (*lcd_show_pixel)(uint32_t nX, uint32_t nY);
 
     int (*lcd_show_pixel_ex)(uint32_t nX, uint32_t nY);
 
     int (*lcd_show_line)(const strLine *lpstrLine);
 
     int (*lcd_show_rect)(const strRect *lpstrRect);
-
-    int (*lcd_extract_rect)(const strRect *lpstrRect, strPicture *lpstrPic);
 
     void (*lcd_brush)(const strRect *lpstrRect);
 
@@ -133,6 +125,8 @@ typedef struct {
     int (*lcd_fill_row_ram)(uint32_t nRow, uint32_t nCol, const char *lpText, uint32_t flag);
 
     int (*lcd_clear_row)(uint32_t nRow);
+
+    int (*lcd_get_text_width)(const char *lpText, int size);
 } ddi_lcd_list_t;
 
 typedef struct {
@@ -255,7 +249,7 @@ enum {
     ddi_id(vfs_tell),
     ddi_id(vfs_remove),
     ddi_id(vfs_rename),
-    ddi_id(vfs_access),
+    ddi_id(vfs_filesize),
     ddi_id(vfs_ioctl),
     ddi_id(bt_open) = 0x401,
     ddi_id(bt_close),
@@ -266,26 +260,23 @@ enum {
     ddi_id(bt_ioctl),
     ddi_id(flash_write) = 0x501,
     ddi_id(flash_read),
+    ddi_id(flash_sector_erase),
     ddi_id(flash_ioctl),
     ddi_id(lcd_open) = 0x601,
     ddi_id(lcd_close),
-    ddi_id(lcd_fill_rect),
     ddi_id(lcd_clear_rect),
     ddi_id(lcd_show_text),
-    ddi_id(lcd_bmp_open),
-    ddi_id(lcd_bmp_close),
     ddi_id(lcd_show_picture),
-    ddi_id(lcd_show_pixel),
     ddi_id(lcd_show_pixel_ex),
     ddi_id(lcd_show_line),
     ddi_id(lcd_show_rect),
-    ddi_id(lcd_extract_rect),
     ddi_id(lcd_brush),
     ddi_id(lcd_brush_screen),
     ddi_id(lcd_ioctl),
     ddi_id(lcd_clear_screen),
     ddi_id(lcd_fill_row_ram),
     ddi_id(lcd_clear_row),
+    ddi_id(lcd_get_text_width),
     ddi_id(key_open) = 0x701,
     ddi_id(key_clear),
     ddi_id(key_read),
@@ -321,7 +312,7 @@ enum {
     ddi_id(sec_smgt_ioctl),
     ddi_id(ota_prepare) = 0xC01,
     ddi_id(ota_upgrade),
-	ddi_id(ota_ioctl),
+    ddi_id(ota_ioctl),
     ddi_id(soft_timer_start) = 0xD01,
     ddi_id(soft_timer_get_state),
     ddi_id(soft_timer_is_timeout),

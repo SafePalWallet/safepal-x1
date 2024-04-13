@@ -183,7 +183,7 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
             return RETURN_DISP_MAINPANEL;
         } else if (ret == OPER_LESS_MIN) {
             if (opType == PIN_CODE_CHECK) {
-                ret = gui_disp_info(title, res_getLabel(LANG_LABEL_SET_PIN_LEN_TIPS), TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL,
+                ret = gui_disp_info(title, res_getLabel(LANG_LABEL_SET_PIN_LEN_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                     res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                 if (ret == EVENT_KEY_F1) {
                     memset(kb_result, 0, sizeof(kb_result));
@@ -232,7 +232,7 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
                 case ERROR_SERVICE_DENY:
                 case ERROR_PASSWD_ERROR_MUCH: {
                     gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_SIMPLE),
-                                  res_getLabel(LANG_LABEL_PASSWD_ERROR_MUCH_TIPS), TEXT_ALIGN_CENTER, NULL,
+                                  res_getLabel(LANG_LABEL_PASSWD_ERROR_MUCH_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                   res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     GLobal_PIN_Passed = 0;
                     wallet_destorySeed(0, 0);
@@ -266,7 +266,7 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
                             snprintf(tips, sizeof(tips), "%s", res_getLabel(LANG_LABEL_PASSWD_ERROR_SIMPLE));
                         }
                         gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_TITLE), tips,
-                                      TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
+                                      TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK),
                                       EVENT_KEY_F1);
                         db_msg("Try again");
                     }
@@ -286,7 +286,7 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
                     switch (ret) {
                         case USER_PASSWD_ERR_WEAK: {
                             gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_WEAK_TITLE),
-                                          res_getLabel(LANG_LABEL_PASSWD_ERROR_WEAK_TIPS), TEXT_ALIGN_CENTER,
+                                          res_getLabel(LANG_LABEL_PASSWD_ERROR_WEAK_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
                                           res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                                           EVENT_KEY_F1);
                         }
@@ -295,7 +295,7 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
                         case USER_PASSWD_ERR_NOT_INPUT: {
                             gui_disp_info(res_getLabel(LANG_LABEL_PASSWD_ERROR_FORMAT_TITLE),
                                           res_getLabel(LANG_LABEL_SET_PIN_LEN_TIPS),
-                                          TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                          TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
                                           res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                         }
                             break;

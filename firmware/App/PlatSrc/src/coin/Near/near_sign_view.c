@@ -118,7 +118,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     } else if ((char) msg->operation_type == NFT) {
         name = msg->action.nft.app_name;
         symbol = msg->action.nft.app_name;
-        db->flag |= FLAG_NFT;
+        db->flag |= DB_FLAG_NFT;
     }
 
     if ((char) msg->operation_type == REGISTER_PUBKEY) {
