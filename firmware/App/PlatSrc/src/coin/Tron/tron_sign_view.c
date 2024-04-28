@@ -300,31 +300,231 @@ static int on_sign_show_vote_witness(int contract_type, coin_state *s, DynamicVi
 	}
 	return 0;
 }
+
+static int on_sign_show_freeze_balance_v2(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Stake";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+    const FreezeBalanceV2Contract *contract = &msg->transaction.freeze_balance_v2_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), contract->frozen_balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
+static int on_sign_show_un_freeze_balance_v2(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Unstake";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+    const UnfreezeBalanceV2Contract *c = &msg->transaction.un_freeze_balance_v2_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), c->unfreeze_balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
+static int on_sign_show_withdraw_expire_un_freeze(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    SignRequest *msg = &s->req;
+    DBTxCoinInfo *db = &view->db;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Withdraw";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+
+    int coin_type = msg->coin.type;
+    const char *coin_uname = msg->coin.uname;
+    const WithdrawExpireUnfreezeContract *contract = &msg->transaction.withdraw_expire_un_freeze_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), contract->balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
+static int on_sign_show_delegate_resource_contract(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Delegate";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+    const DelegateResourceContract *contract = &msg->transaction.delegate_resource_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), contract->balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "to:");
+    view_add_txt(TXS_LABEL_PAYTO_ADDRESS, is_not_empty_string(contract->receiver_address) ? contract->receiver_address : contract->owner_address);
+    return 0;
+}
+
+static int on_sign_show_un_delegate_resource_contract(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Reclaim";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+    const UnDelegateResourceContract *contract = &msg->transaction.un_delegate_resource_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), contract->balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
+static int on_sign_show_cancel_all_un_freeze_v2_contract(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Cancel Unstake";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+
+    const CancelAllUnfreezeV2Contract *contract = &msg->transaction.cancel_all_un_freeze_v2_contract;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Amount:");
+    format_coin_real_value(balance, sizeof(balance), contract->balance, config->decimals);
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s TRX", balance);
+    view_add_txt(TXS_LABEL_FIELD_VALUE, tmpbuf);
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
 static int on_sign_show(void *session, DynamicViewCtx *view) {
-	coin_state *s = (coin_state *) session;
-	if (!s) {
-		db_error("invalid session");
-		return -1;
-	}
-	DBTxCoinInfo *db = &view->db;
-	SignRequest *msg = &s->req;
-	memset(db, 0, sizeof(DBTxCoinInfo));
-	switch (msg->transaction.contract_type) {
-		case CONTRACT_TYPE_TRANSFER_CONTRACT:
-		case CONTRACT_TYPE_TRANSFER_ASSET_CONTRACT:
-		case CONTRACT_TYPE_TRANSFER_TRC20_CONTRACT:
-			return on_sign_show_transfer_x_contract(msg->transaction.contract_type, s, view);
-		case CONTRACT_TYPE_TRIGGER_SMART_CONTRACT:
-			return on_sign_show_smart_contract(msg->transaction.contract_type, s, view);
-		case CONTRACT_TYPE_FREEZE_BALANCE_CONTRACT:
-			return on_sign_show_freeze_balance(msg->transaction.contract_type, s, view);
-		case CONTRACT_TYPE_UN_FREEZE_BALANCE_CONTRACT:
-			return on_sign_show_unfreeze_balance(msg->transaction.contract_type, s, view);
-		case CONTRACT_TYPE_VOTE_WITNESS_CONTRACT:
-			return on_sign_show_vote_witness(msg->transaction.contract_type, s, view);
-		default:
-			return -190;
-	}
+    coin_state *s = (coin_state *) session;
+    if (!s) {
+        db_error("invalid session");
+        return -1;
+    }
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+    memset(db, 0, sizeof(DBTxCoinInfo));
+    switch (msg->transaction.contract_type) {
+        case CONTRACT_TYPE_TRANSFER_CONTRACT:
+        case CONTRACT_TYPE_TRANSFER_ASSET_CONTRACT:
+        case CONTRACT_TYPE_TRANSFER_TRC20_CONTRACT:
+            return on_sign_show_transfer_x_contract(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_TRIGGER_SMART_CONTRACT:
+            return on_sign_show_smart_contract(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_FREEZE_BALANCE_CONTRACT:
+            return on_sign_show_freeze_balance(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_UN_FREEZE_BALANCE_CONTRACT:
+            return on_sign_show_unfreeze_balance(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_VOTE_WITNESS_CONTRACT:
+            return on_sign_show_vote_witness(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_FREEZE_BALANCE_V2_CONTRACT:
+            return on_sign_show_freeze_balance_v2(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_UN_FREEZE_BALANCE_V2_CONTRACT:
+            return on_sign_show_un_freeze_balance_v2(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_WITHDRAW_EXPIRE_UN_FREEZE_CONTRACT:
+            return on_sign_show_withdraw_expire_un_freeze(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_DELEGATE_RESOURCE_CONTRACT:
+            return on_sign_show_delegate_resource_contract(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_UN_DELEGATE_RESOURCE_CONTRACT:
+            return on_sign_show_un_delegate_resource_contract(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_CANCEL_All_UN_FREEZE_V2_CONTRACT:
+            return on_sign_show_cancel_all_un_freeze_v2_contract(msg->transaction.contract_type, s, view);
+        default:
+            return -190;
+    }
 }
 
 #endif

@@ -95,7 +95,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 	coin_type = msg->coin.type;
 	coin_uname = msg->coin.uname;
-	if (((char)msg->operation_type==OP_TYPE_TOKENTRANSFER) || ((char)msg->operation_type==OP_TYPE_CREATE_AND_TRANSFER)) {
+	if (((char)msg->operation_type==OP_TYPE_TOKENTRANSFER) || ((char)msg->operation_type==OP_TYPE_CREATE_AND_TRANSFER) || 
+	   ((char)msg->operation_type==OP_TYPE_TOEKN2022_TRANSFER) || ((char)msg->operation_type==OP_TYPE_TOEKN2022_CREATE_AND_TRANSFER)
+	) {
 		if (is_empty_string(msg->token.name) || is_empty_string(msg->token.symbol)) {
 			db_error("invalid dtoken name:%s or symbol:%s", msg->token.name, msg->token.symbol);
 			return -1;
@@ -145,7 +147,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 	if (((char) msg->operation_type == OP_TYPE_TRANSFER) || \
         ((char) msg->operation_type == OP_TYPE_TOKENTRANSFER) || \
-        ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER)) {
+        ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER) || \
+		((char) msg->operation_type == OP_TYPE_TOEKN2022_TRANSFER) || \
+        ((char) msg->operation_type == OP_TYPE_TOEKN2022_CREATE_AND_TRANSFER)) {
 		view->coin_symbol = res_getLabel(LANG_LABEL_SEND);
 		if (proto_check_exchange(&msg->exchange) != 0) {
 			db_error("invalid exchange");
@@ -157,21 +161,26 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		db_msg("ex_rate:%f", ex_rate);
 		db_msg("money_symbol:%s", money_symbol);
 
+		memset(tmpbuf, 0, sizeof(tmpbuf));
 		if ((char) msg->operation_type == OP_TYPE_TRANSFER) {
 			send_amount = msg->action.transfer.value;
-			send_value = ((double) send_amount) / 1000000000;
+			// send_value = ((double) send_amount) / 1000000000;
+			format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
 			coin_decimals = 9;
 		} else if (((char) msg->operation_type == OP_TYPE_TOKENTRANSFER) || \
-            ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER)) {
+            ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER) || \
+			((char) msg->operation_type == OP_TYPE_TOEKN2022_TRANSFER) || \
+            ((char) msg->operation_type == OP_TYPE_TOEKN2022_CREATE_AND_TRANSFER)) {
 			send_amount = msg->action.token_transfer.amount;
-			send_value = proto_coin_real_value(send_amount, msg->action.token_transfer.decimals);
+			// send_value = proto_coin_real_value(send_amount, msg->action.token_transfer.decimals);
+			format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, msg->action.token_transfer.decimals);
 			coin_decimals = msg->action.token_transfer.decimals;
 		}
 
-		db_msg("send_value:%.8lf", send_value);
+		// db_msg("send_value:%.8lf", send_value);
 
-		memset(tmpbuf, 0, sizeof(tmpbuf));
-		snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
+		// memset(tmpbuf, 0, sizeof(tmpbuf));
+		// snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
 		view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_TOTAL_VALUE, symbol);
 
@@ -206,13 +215,38 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		if ((char) msg->operation_type == OP_TYPE_TRANSFER) {
 			send_amount = msg->action.transfer.fee;
 		} else if (((char) msg->operation_type == OP_TYPE_TOKENTRANSFER) || \
-            ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER)) {
+            ((char) msg->operation_type == OP_TYPE_CREATE_AND_TRANSFER) || \
+			((char) msg->operation_type == OP_TYPE_TOEKN2022_TRANSFER) || \
+            ((char) msg->operation_type == OP_TYPE_TOEKN2022_CREATE_AND_TRANSFER)) {
 			send_amount = msg->action.token_transfer.fee;
 		}
 		format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_MAXID, mainConfig->symbol);
 
+		if (((char) msg->operation_type == OP_TYPE_TOEKN2022_TRANSFER) || \
+            ((char) msg->operation_type == OP_TYPE_TOEKN2022_CREATE_AND_TRANSFER)) {
+			const char *memo = msg->action.token_transfer.memo;
+			if (is_printable_str(memo)) {
+				view_add_txt(0, res_getLabel(LANG_LABEL_TX_MEMO_TITLE));
+				view_add_txt(0, memo);
+			} else {
+				view_add_txt(0, res_getLabel(LANG_LABEL_TX_MEMO_HEX_TITLE));
+				ret = strlen(memo);
+				if (ret * 2 < (int) sizeof(tmpbuf)) {
+					bin_to_hex((const unsigned char *)memo, ret, tmpbuf);
+					view_add_txt(0, tmpbuf);
+				} else {
+					char *hex = (char *) malloc((ret + 1) * 2);
+					if (hex) {
+						memset(hex, 0, (ret + 1) * 2);
+						bin_to_hex((const unsigned char *)memo, ret, hex);
+						view_add_txt(0, hex);
+						free(hex);
+					}
+				}
+			}
+		}
 	} else if (((char) msg->operation_type == OP_TYPE_NFT_TRANSFER) || \
         ((char) msg->operation_type == OP_TYPE_NFT_CREATE_AND_TRANSFER)) {
 		view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);

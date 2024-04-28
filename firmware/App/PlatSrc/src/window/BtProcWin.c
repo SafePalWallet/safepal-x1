@@ -1282,7 +1282,7 @@ int mainPanel(void) {
                     if (!tips) {
                         dialog_error4(ret, res_getLabel(LANG_LABEL_TX_OK_TITLE), res_getLabel(LANG_LABEL_TX_OK_TIPS));
                     } else {
-                        gui_disp_info(tips->title, tips->msg, TEXT_ALIGN_CENTER | TEXT_VALIGN_CENTER, NULL,
+                        gui_disp_info(tips->title, tips->msg, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL,
                                       res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     }
                     status = STAT_DATA_RECV;

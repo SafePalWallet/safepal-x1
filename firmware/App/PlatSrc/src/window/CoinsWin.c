@@ -84,7 +84,11 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
     }
 
     const char *name = NULL;
-    if (type == COIN_TYPE_BRC20) {
+    if (type == COIN_TYPE_RUNE_TEST) {
+        name = "tRunes";
+    }else if (type == COIN_TYPE_RUNE) {
+        name = "Runes";
+    } else if (type == COIN_TYPE_BRC20) {
         name = "BRC20";
     } else {
         const CoinConfig *coinConfig = getCoinConfig(type, uname);
@@ -164,9 +168,15 @@ static int addressWin(int param) {
     }
     db_msg("jumpTo type:%x,uname:%s symbol:%s", p->type, p->uname, p->symbol);
 
-    if (IS_BTC_COIN_TYPE(p->type) || p->type == COIN_TYPE_SOLANA ||  p->type == COIN_TYPE_BRC20) {
+    if (IS_BTC_COIN_TYPE(p->type) || p->type == COIN_TYPE_SOLANA || p->type == COIN_TYPE_BRC20 || p->type == COIN_TYPE_RUNE) {
         db_msg("jumpTo btc or sol win");
         return AddressTypeWin(param);
+    } else if (p->type == COIN_TYPE_RUNE_TEST) {
+        p->type = COIN_TYPE_BITCOIN_TEST;
+        memset(p->uname, 0x0, COIN_UNAME_BUFFSIZE);
+        const char *uname = "tBTC";
+        strncpy(p->uname, uname, strlen(uname));
+        return CoinDetailWin(param);
     } else {
         return CoinDetailWin(param);
     }
@@ -221,38 +231,42 @@ static int refreshItemList(int init_select) {
             }
         }
     } else {
-        cstring *tx_str = cstr_new_sz(10);
+        cstring *typeName = cstr_new_sz(10);
         const char *name = NULL;
         GLobal_Is_Coin_EVM_Category = 0;
         for (i = 0; i < mViewTotal; i++) {
             db_msg("name:%s symbol:%s, flag:%#x", mItems[i].name, mItems[i].symbol, mItems[i].flag);
             if ((!IS_VALID_COIN_TYPE(mItems[i].type)) && (mItems[i].flag & DB_FLAG_UNIVERSAL_EVM)) {
-                cstr_clean(tx_str);
-                cstr_append_buf(tx_str, mItems[i].symbol, strlen(mItems[i].symbol));
-                cstr_append_buf(tx_str, "(", 1);
-                cstr_append_buf(tx_str, mItems[i].name, strlen(mItems[i].name));
-                cstr_append_buf(tx_str, ")\0", 1);
+                cstr_clean(typeName);
+                cstr_append_buf(typeName, mItems[i].symbol, strlen(mItems[i].symbol));
+                cstr_append_buf(typeName, "(", 1);
+                cstr_append_buf(typeName, mItems[i].name, strlen(mItems[i].name));
+                cstr_append_buf(typeName, ")\0", 1);
                 name = mItems[i].name;
                 GLobal_Is_Coin_EVM_Category = 1;
             } else {
-                name = getTypeUname(mItems[i].type, mItems[i].symbol, mItems[i].uname, tx_str);
+                if (mItems[i].type == COIN_TYPE_RUNE_TEST || mItems[i].type == COIN_TYPE_RUNE) {
+                    name = getTypeUname(mItems[i].type, mItems[i].name, mItems[i].uname, typeName);
+                } else {
+                    name = getTypeUname(mItems[i].type, mItems[i].symbol, mItems[i].uname, typeName);
+                }
             }
 
             if (name == NULL) {
                 db_error("getTypeUname failed");
-                cstr_free(tx_str);
+                cstr_free(typeName);
                 return -6;
             }
 
             memset(mCoinName[i], 0x0, COIN_NAME_LEN);
-            if (tx_str->len >= COIN_NAME_LEN) {
-                memcpy(mCoinName[i], tx_str->str, COIN_NAME_LEN - 4);
+            if (typeName->len >= COIN_NAME_LEN) {
+                memcpy(mCoinName[i], typeName->str, COIN_NAME_LEN - 4);
                 memcpy(mCoinName[i] + COIN_NAME_LEN - 4, "..", 2);
                 // memcpy(mCoinName[i] + COIN_NAME_LEN - 2, '\0\0', 2);
             } else {
-                memcpy(mCoinName[i], tx_str->str, tx_str->len);
+                memcpy(mCoinName[i], typeName->str, typeName->len);
             }
-            db_msg("mCoinName[%d]:%s", i, tx_str->str);
+            db_msg("mCoinName[%d]:%s", i, typeName->str);
             mCoinMenu[i].pMenuText = (char *)mCoinName[i];
             db_msg("mCoinMenu[%d]:%s name:%s symbol:%s type:%d", i, mCoinMenu[i].pMenuText, mItems[i].name,
                    mItems[i].symbol, mItems[i].type);
@@ -261,15 +275,15 @@ static int refreshItemList(int init_select) {
             mTypeUname[i].type = mItems[i].type;
             strncpy(mTypeUname[i].uname, mItems[i].uname, sizeof(mTypeUname[i].uname));
             strncpy(mTypeUname[i].chain_name, name, sizeof(mTypeUname[i].chain_name));
-            if (tx_str->len >= COIN_UNAME_BUFFSIZE) {
-                memcpy(mTypeUname[i].symbol, tx_str->str, COIN_UNAME_BUFFSIZE);
+            if (typeName->len >= COIN_UNAME_BUFFSIZE) {
+                memcpy(mTypeUname[i].symbol, typeName->str, COIN_UNAME_BUFFSIZE);
             } else {
-                memcpy(mTypeUname[i].symbol, tx_str->str, tx_str->len);
+                memcpy(mTypeUname[i].symbol, typeName->str, typeName->len);
             }
             mCoinMenu[i].param = (uint32_t) & mTypeUname[i];
         }
 
-        cstr_free(tx_str);
+        cstr_free(typeName);
 
     }
 

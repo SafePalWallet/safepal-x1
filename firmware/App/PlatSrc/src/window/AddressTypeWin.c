@@ -119,7 +119,7 @@ int AddressTypeWin(type_uname *param) {
         } else {
             return MultiAddressWin(param);
         }
-    } else if (param->type == COIN_TYPE_BRC20) {
+    } else if (param->type == COIN_TYPE_BRC20 || param->type == COIN_TYPE_RUNE) {
         const char pMenuText[4][20] = {"Legacy", "SegWit", "Native SegWit", "Taproot"};
         ret = update_menu(menu, param_list, 0, pMenuText, param, "BTC", COIN_TYPE_BITCOIN);
         if (ret != 0) {return ret;}
