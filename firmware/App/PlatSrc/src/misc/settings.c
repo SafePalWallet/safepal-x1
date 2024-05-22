@@ -66,6 +66,7 @@ void settings_set_default() {
     gSettings->mBrightness = 3;//BRIGHTNESS_LEVEL_3;
     gSettings->mRandPinKeypad = 1;//OFF
     gSettings->mAccountType = 0;//unknow
+    gSettings->mBtcMultiAddress = 0;//OFF
     memset(mDeviceName, 0, DEVICE_NAME_SIZEOF);
 }
 
@@ -107,6 +108,7 @@ static int *findKey2Value(const char *key) {
         CHECK_KEY(SETTING_KEY_BRIGHTNESS, gSettings->mBrightness)
         CHECK_KEY(SETTING_KEY_RAND_PIN_KEYPAD, gSettings->mRandPinKeypad)
         CHECK_KEY(SETTING_KEY_ACCOUNT_TYPE, gSettings->mAccountType)
+        CHECK_KEY(SETTING_KEY_BTC_MULTI_ADDRESS, gSettings->mBtcMultiAddress)
 
         db_error("unknow config key:%s", key);
     } while (0);
@@ -223,6 +225,10 @@ int settings_init() {
     }
     if (gSettings->mLang > LANG_MAXID) {
         gSettings->mLang = CONFIG_DEFAULT_LANG;
+    }
+
+    if (gSettings->mOtaPreVersion > 10000 && gSettings->mOtaPreVersion < 10009) {
+        settings_save(SETTING_KEY_BTC_MULTI_ADDRESS, 1);
     }
 
     if (!gHaveSeed) {

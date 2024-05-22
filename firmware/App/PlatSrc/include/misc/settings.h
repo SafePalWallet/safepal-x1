@@ -11,8 +11,8 @@
 #define APP_VERSION_PREFIX "V"
 #endif
 
-#define DEVICE_APP_INT_VERSION  10008
-#define DEVICE_APP_VERSION  APP_VERSION_PREFIX"1.0.8"
+#define DEVICE_APP_INT_VERSION  10009
+#define DEVICE_APP_VERSION  APP_VERSION_PREFIX"1.0.9"
 
 #define COINS_INIT_VERSION 5
 
@@ -45,6 +45,7 @@
 #define SETTING_KEY_BRIGHTNESS "Brightness"
 #define SETTING_KEY_RAND_PIN_KEYPAD "RandPinKeypad"
 #define SETTING_KEY_ACCOUNT_TYPE "AccountType"
+#define SETTING_KEY_BTC_MULTI_ADDRESS "BtcMultiAddress"
 
 #define SETTING_KEY_PKEY   "PKey"
 
@@ -88,16 +89,17 @@ extern "C" {
 #endif
 
 typedef struct {
-    int mLang;
-    int mOtaPreVersion;
-    int mCoinsVersion;
-    int mFTStep;
-    int mTimeZone;
-    int mScreenSaver;
-    int mAutoShutdownTime;
-    int mBrightness;
-    int mRandPinKeypad;
-    int mAccountType;
+	int mLang;
+	int mOtaPreVersion;
+	int mCoinsVersion;
+	int mFTStep;
+	int mTimeZone;
+	int mScreenSaver;
+	int mAutoShutdownTime;
+	int mBrightness;
+	int mRandPinKeypad;
+	int mAccountType;
+	int mBtcMultiAddress;
 } SettingsInfo;
 
 extern SettingsInfo gSettings[1];

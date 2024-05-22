@@ -10,6 +10,8 @@ extern "C" {
 
 #define LLONG_MAX 9223372036854775807ll
 
+#define UNSUPPORT_MSG_UPGRADE_TRY_AGAIN   (-10300)
+
 int is_coin_address_long(int coinid);
 
 int format_data_to_hex(const unsigned char *bytes, int size, char *tmpbuf, int bufflen);

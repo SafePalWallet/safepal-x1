@@ -51,6 +51,8 @@ static int gScreenTimes[SCREEN_SAVER_TIMER_MAX] = {15, 30, 45, 60};
 static const char *gScreenTimeStr[SCREEN_SAVER_TIMER_MAX] = {"15s", "30s", "45s", "60s"};
 static const char *gBrightnessLevelStr[BRIGHTNESS_LEVEL_MAX] = {"1", "2", "3"};
 static const char *gBtLevelStr[BT_LEVEL_MAX] = {"ON", "OFF"};
+static int gBtcMultiAddress[BTC_MULTI_ADDRESS_MAX] = {0, 1};
+static const char *gBtcMultiAddressStr[BTC_MULTI_ADDRESS_MAX] = {0};
 
 enum {
     PINCODE_SETUP_STEP_VERIFY = 0,
@@ -167,25 +169,24 @@ static int resetDevice(int param) {
         if (ret == EVENT_CANCEL) {
             continue;
         } else if (ret == EVENT_OK) {
-
+            break;
         } else if (ret == EVENT_KEY_F1) {
             return RETURN_DISP_MAINPANEL;
         } else {
             db_msg("disclaimer alert false:%d", ret);
             return -2;
         }
-
-        gui_show_state(res_getLabel(LANG_LABEL_MENU_RESET), res_getLabel(LANG_LABEL_RESET_PROCESS_TIPS));
-        gui_on_process(10);
-        ret = wallet_destorySeed(1, 30);
-        db_msg("destorySeed ret:%d", ret);
-        gui_on_process(60);
-        doFactoryReset();
-        gui_on_process(80);
-        sec_reset_randkey(0);
-        gui_on_process(100);
-        break;
     } while (1);
+
+    gui_show_state(res_getLabel(LANG_LABEL_MENU_RESET), res_getLabel(LANG_LABEL_RESET_PROCESS_TIPS));
+    gui_on_process(10);
+    ret = wallet_destorySeed(1, 30);
+    db_msg("destorySeed ret:%d", ret);
+    gui_on_process(60);
+    doFactoryReset();
+    gui_on_process(80);
+    sec_reset_randkey(0);
+    gui_on_process(100);
 
     if (gSettings->mLang != 0) {
         settings_save(SETTING_KEY_LANGUAGE, settings_get_lang());
@@ -298,6 +299,64 @@ static int changeBrightness(int old_data) {
 
     return 0;
 }
+
+static int changeBtcMultiAddress() {
+    int ret = -1;
+
+    do {
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIP0),
+                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
+                            EVENT_KEY_F1);
+        if (ret == EVENT_CANCEL) {
+            return ret;
+        } else if (ret == EVENT_KEY_F1) {
+            return RETURN_DISP_MAINPANEL;
+        } else if (ret < 0) {
+            db_msg("false:%d", ret);
+            return -1;
+        }
+
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIP1),
+                            TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
+                            EVENT_KEY_F1);
+        if (ret == EVENT_CANCEL) {
+            continue;
+        } else if (ret == EVENT_OK) {
+            break;
+        } else if (ret == EVENT_KEY_F1) {
+            return RETURN_DISP_MAINPANEL;
+        } else {
+            db_msg("false:%d", ret);
+            return -2;
+        }
+    } while (1);
+
+    int initIndex = 0;
+    gBtcMultiAddressStr[BTC_MULTI_ADDRESS_OFF] = res_getLabel(LANG_LABEL_BTC_SINGLE_ADDRESS);
+    gBtcMultiAddressStr[BTC_MULTI_ADDRESS_ON] = res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS);
+
+    for (int i = BTC_MULTI_ADDRESS_OFF; i < BTC_MULTI_ADDRESS_MAX; ++i) {
+        if (gBtcMultiAddress[i] == (gSettings->mBtcMultiAddress)) {
+            initIndex = i;
+            break;
+        }
+    }
+
+    ret = gui_show_menu(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), BTC_MULTI_ADDRESS_MAX, initIndex,
+                        gBtcMultiAddressStr, TEXT_ALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                        res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+    if (ret < 0 || ret > BTC_MULTI_ADDRESS_MAX) {
+        return -3;
+    } else if (ret == EVENT_KEY_F1) {
+        return RETURN_DISP_MAINPANEL;
+    }
+
+    db_msg("gBtcMultiAddress:%d ret:%d", gBtcMultiAddress[ret], ret);
+    settings_save(SETTING_KEY_BTC_MULTI_ADDRESS, gBtcMultiAddress[ret]);
+
+    return 0;
+}
+
 
 static int changePassword(int param) {
     int ret = 0;
@@ -718,6 +777,7 @@ int SettingWin(void) {
             {LANG_LABEL_SET_ITEM_CHANGE_PASSWD, VAL_OFF, SUB_ON, NULL,               changePassword,         0},
             {LANG_LABEL_SET_ITEM_CHANGE_LANG,   VAL_OFF, SUB_ON, NULL,               setupLang,              settings_get_lang()},
             {LANG_LABEL_SET_BRIGHTNESS_LEVEL,   VAL_OFF, SUB_ON, NULL,               changeBrightness,       0},
+            {LANG_LABEL_BTC_MULTI_ADDRESS,      VAL_OFF, SUB_ON, NULL,               changeBtcMultiAddress,  0},
             {LANG_LABEL_BLUETOOTH,              VAL_OFF, SUB_ON, mBluetoothStr,      changeBluetooth,        0},
             {LANG_LABEL_UPGRADE,                VAL_OFF, SUB_ON, NULL,               updateFirmware,         0},
             {LANG_LABEL_MENU_RESET,             VAL_OFF, SUB_ON, NULL,               resetDevice,            0},

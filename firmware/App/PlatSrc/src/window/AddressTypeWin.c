@@ -15,10 +15,10 @@ static int jumpWin(int param) {
     }
     int ret = 0;
     db_msg("p->chain_name%s", p->chain_name);
-    if (!strcmp(p->chain_name, "BRC20")) {
+    if (!strcmp(p->chain_name, "BRC20") || !strcmp(p->chain_name, "Runes")) {
         ret = CoinDetailWin(param);
     } else if(p->type == COIN_TYPE_BITCOIN) {
-        if (!strncmp(COIN_UNAME_BTC4, p->uname, 5)) {
+        if ((!strncmp(COIN_UNAME_BTC4, p->uname, 5)) || (gSettings->mBtcMultiAddress == 0)) {
             db_msg("taproot", ret, p->uname);
             ret = CoinDetailWin(param);
         } else {
@@ -117,7 +117,12 @@ int AddressTypeWin(type_uname *param) {
             ret = gui_show_rich_menu(param->symbol, MENU_LIST | MENU_ICON_NUM, index, 0, menu);
             return ret;
         } else {
-            return MultiAddressWin(param);
+            if (gSettings->mBtcMultiAddress == 0) {
+                ret = CoinDetailWin((int) param);
+            } else {
+                ret = MultiAddressWin(param);
+            }
+            return ret;
         }
     } else if (param->type == COIN_TYPE_BRC20 || param->type == COIN_TYPE_RUNE) {
         const char pMenuText[4][20] = {"Legacy", "SegWit", "Native SegWit", "Taproot"};

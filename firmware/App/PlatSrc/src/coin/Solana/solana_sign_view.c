@@ -127,6 +127,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 	} else if((char)msg->operation_type==OP_TYPE_MSG){
 		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 		symbol = msg->action.msg.app_name;
+	} else if((char)msg->operation_type==OP_TYPE_SWAP){
+		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+		symbol = "Swap";
 	} else{
 		const CoinConfig *config = getCoinConfig(msg->coin.type, msg->coin.uname);
 		if (!config) {
@@ -334,6 +337,16 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 		view_add_txt(TXS_LABEL_APP_MSG_VALUE, "Data:");
 		view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.msg.message);
+	} else if ((char)msg->operation_type == OP_TYPE_SWAP) {
+		view->coin_symbol = symbol;
+		db->tx_type = TX_TYPE_APP_SIGN_MSG;
+		view->total_height = SCREEN_HEIGHT;
+		view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
+
+		if (mainConfig) {
+			view_add_txt(TXS_LABEL_MAXID, "Chain:");
+			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+		}
 	} else {
 
 	}
