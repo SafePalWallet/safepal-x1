@@ -94,7 +94,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         ret = bignum2double((const unsigned char *) msg->action.sendCoins.amount.bytes, msg->action.sendCoins.amount.size, coin_decimals, &send_value, tmpbuf, sizeof(tmpbuf));
         strlcpy(db->send_value, tmpbuf, sizeof(db->send_value));
         view_add_txt(0, tmpbuf);
-        view_add_txt(0, "TON");
+        view_add_txt(0, symbol);
         view_add_txt(0, "Chain:");
         view_add_txt(0, "Toncoin");
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
