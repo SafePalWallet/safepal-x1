@@ -75,7 +75,8 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
 
     if (strcmp(uname, "OETH") != 0 &&
         strcmp(uname, "ARETH") != 0 &&
-        strcmp(uname, "AURORAETH") != 0 ) {
+        strcmp(uname, "AURORAETH") != 0 &&
+        strcmp(symbol, "ETH(Taiko)") != 0) {
         ret = cstr_append_buf(tx_str, "(", 1);
         if (ret != 1) {
             db_error("tx_str add ( err");
@@ -141,7 +142,8 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
 
     if (strcmp(uname, "OETH") != 0 &&
         strcmp(uname, "ARETH") != 0 &&
-        strcmp(uname, "AURORAETH") != 0 ) {
+        strcmp(uname, "AURORAETH") != 0 &&
+        strcmp(symbol, "ETH(Taiko)") != 0) {
         ret = cstr_append_buf(tx_str, name, strlen(name));
         if (ret != 1) {
             db_error("tx_str add name err");

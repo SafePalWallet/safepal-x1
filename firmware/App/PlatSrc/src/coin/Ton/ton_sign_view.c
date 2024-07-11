@@ -44,7 +44,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 db_msg("not config type:%d name:%s", msg->coin.type, msg->coin.uname);
                 name = msg->coin.uname;
                 symbol = msg->coin.uname;
-                coin_decimals = 18;
+                coin_decimals = 9;
             } else {
                 name = config->name;
                 symbol = config->symbol;
@@ -103,7 +103,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, msg->action.sendCoins.to);
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
 		memset(tmpbuf, 0x0, sizeof(tmpbuf));
-		ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, coin_decimals, &send_value, tmpbuf, sizeof(tmpbuf));
+		ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, 9, &send_value, tmpbuf, sizeof(tmpbuf));
         view_add_txt(0, tmpbuf);
         view_add_txt(0, "TON");
     } else if ((char) msg->operation_type == TON_DAPP) {
