@@ -9,7 +9,7 @@
 #include "coin_util_hw.h"
 
 static int on_sign_show(void *session, DynamicViewCtx *view) {
-	char tmpbuf[128];
+    char tmpbuf[128];
     int coin_type = 0;
     const char *coin_uname = NULL;
     const char *name = NULL;
@@ -85,7 +85,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     }
 
     if ((char) msg->operation_type == TON_TRANSFER) {
-		view->coin_symbol = res_getLabel(LANG_LABEL_SEND);
+        view->coin_symbol = res_getLabel(LANG_LABEL_SEND);
         if (proto_check_exchange(&msg->exchange) != 0) {
             db_error("invalid exchange");
             return -4;
@@ -102,40 +102,76 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
         view_add_txt(0, msg->action.sendCoins.to);
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		memset(tmpbuf, 0x0, sizeof(tmpbuf));
-		ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, 9, &send_value, tmpbuf, sizeof(tmpbuf));
+        memset(tmpbuf, 0x0, sizeof(tmpbuf));
+        ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, 9, &send_value, tmpbuf, sizeof(tmpbuf));
         view_add_txt(0, tmpbuf);
         view_add_txt(0, "TON");
     } else if ((char) msg->operation_type == TON_DAPP) {
-		view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+        view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 
-		view_add_txt(0, "DApp:");
-		view_add_txt(0, symbol);
+        view_add_txt(0, "DApp:");
+        view_add_txt(0, symbol);
 
         view_add_txt(0, "Chain:");
         view_add_txt(0, "Toncoin");
 
-		view_add_txt(0, "Data:");
+        view_add_txt(0, "Data:");
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
         view_add_txt(0, msg->action.dapp.content);
-    } else  if ((char) msg->operation_type == TON_MSG) {
-		view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+    } else if ((char) msg->operation_type == TON_MSG) {
+        view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 
-		view_add_txt(0, "DApp:");
-		view_add_txt(0, symbol);
+        view_add_txt(0, "DApp:");
+        view_add_txt(0, symbol);
 
         view_add_txt(0, "Chain:");
         view_add_txt(0, "Toncoin");
 
-		view_add_txt(0, "Data:");
+        view_add_txt(0, "Data:");
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
         memset(tmpbuf, 0x0, sizeof(tmpbuf));
         omit_string(tmpbuf, msg->action.msg.message, 52, 20);
         view_add_txt(0, tmpbuf);
+    } else if ((char) msg->operation_type == TON_NFT) {
+        name = msg->action.sendCoins.app_name;
+        symbol = msg->action.sendCoins.app_name;
+
+        view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
+        view_add_txt(0, symbol);
+
+        view_add_txt(0, "Contract Address");
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        omit_string(tmpbuf, msg->action.sendCoins.contract, 8, 8);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
+        omit_string(tmpbuf, tmpbuf, 26, 11);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        omit_string(tmpbuf, msg->action.sendCoins.to, 26, 11);
+        view_add_txt(0, tmpbuf);
+
+        coin_decimals = 9;
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes,
+                            msg->action.sendCoins.fee.size, coin_decimals, &send_value, tmpbuf,
+                            sizeof(tmpbuf));
+        db_msg("fee send_value:%.8lf", send_value);
+        snprintf(tmpbuf, sizeof(tmpbuf), "%s TON", tmpbuf);
+        db_msg("feed value:%s", tmpbuf);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, "Chain:");
+        view_add_txt(0, "Toncoin");
     }
 
     if ((char) msg->operation_type == TON_TRANSFER && !is_empty_string(msg->action.sendCoins.payload)) {
-		db_msg("memo:%s", msg->action.sendCoins.payload);
+        db_msg("memo:%s", msg->action.sendCoins.payload);
         view->total_height = 3 * SCREEN_HEIGHT;
         if (is_printable_str(msg->action.sendCoins.payload)) {
             view_add_txt(0, res_getLabel(LANG_LABEL_TX_MEMO_TITLE));
@@ -156,7 +192,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 }
             }
         }
-    } 
+    }
 
     db->coin_type = coin_type;
     strlcpy(db->coin_name, name, sizeof(db->coin_name));
