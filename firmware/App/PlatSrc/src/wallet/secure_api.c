@@ -21,6 +21,8 @@
 #include "libddi.h"
 #include "common_util.h"
 #include "secure_util.h"
+#include "zkp_bip340.h"
+#include "zkp_context.h"
 
 #define GET_UINT_FROM_BBUF(buf)            \
     (uint32_t)(                              \

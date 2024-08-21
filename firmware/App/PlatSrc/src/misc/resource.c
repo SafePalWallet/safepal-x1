@@ -227,7 +227,7 @@ int res_loadLabelFromLangFile(const char *langFile) {
         ddi_flash_read(INTERNAL_LANG_LABEL_ADDR + sizeof(StrMergeFileHead) + (sizeof(StrMergeFileInfo) * i), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
         db_msg("i:%d, name:%s, len:%d, offset:%d", i, fileInfo.file_name, fileInfo.len, fileInfo.offset);
 
-        if ((fileInfo.len == 0) || (fileInfo.len > (15 * 1024))) {
+        if ((fileInfo.len == 0) || (fileInfo.len > (20 * 1024))) {
             db_error("invalid len:%d", fileInfo.len);
             return -4;
         }
