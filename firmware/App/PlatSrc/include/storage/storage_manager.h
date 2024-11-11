@@ -52,6 +52,8 @@ int storage_upgrade(uint64_t account_id);
 
 int storage_queryClientId(const char *unique_id);
 
+int storage_queryClientUniqueId(int client_id, char *unique_id);
+
 int storage_getClientInfo(int client_id, ClientInfo *client);
 
 int storage_getClientSeckey(int client_id, unsigned char *key);

@@ -261,8 +261,8 @@ static int showDownloadAppQR(void) {
 }
 
 static int activeDevice(void) {
-    int status = 0, retval = 0, recvlen = 0, notifyTick = 0;
-    uint32_t key, multiPackFlag = 0, datalen = 0;
+    int status = 0, notifyTick = 0;
+    uint32_t key;
     uint8_t recvBuff[600] = {0};
     uint32_t bt_status = 0, enc_state = 0, cnt = 0, brush_face = 0, brush_tip = 1;
     int ret = -1, btStatus = 0, notifyCnt = 0, recvLen = 0, brushBarCnt = 1;
@@ -1026,18 +1026,18 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
 
 static int showAboutWalletSimple(void) {
     char str[128], sn[24];
-    int ret = 0, os_verison;
+    int ret = 0, os_version;
     int width = 0;
 
     dwin_init();
 
     //version
-    os_verison = ddi_sys_get_firmware_ver(OS_VER);
+    os_version = ddi_sys_get_firmware_ver(OS_VER);
     memset(str, 0x0, sizeof(str));
-    snprintf(str, sizeof(str), "%s: %s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_verison);
+    snprintf(str, sizeof(str), "%s: %s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_version);
     width = ddi_lcd_get_text_width(str);
     if (width > g_gui_info.uiScrWidth) {
-        snprintf(str, sizeof(str), "%s:\n%s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_verison);
+        snprintf(str, sizeof(str), "%s:\n%s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_version);
     }
     SetWindowMText(0, str);
 

@@ -22,7 +22,6 @@
 #include "gui_statusbar.h"
 #include "ex_vfs.h"
 #include "gui_icons.h"
-#include "LanguageTest.h"
 
 #define AUTO_OFF_TIME_CNT 4
 #define SWITCH_OPEN        (1)
@@ -304,7 +303,7 @@ static int changeBtcMultiAddress() {
     int ret = -1;
 
     do {
-        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIP0),
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIPS0),
                             TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                             EVENT_KEY_F1);
         if (ret == EVENT_CANCEL) {
@@ -316,7 +315,7 @@ static int changeBtcMultiAddress() {
             return -1;
         }
 
-        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIP1),
+        ret = gui_disp_info(res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS), res_getLabel(LANG_LABEL_BTC_MULTI_ADDRESS_TIPS1),
                             TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK),
                             EVENT_KEY_F1);
         if (ret == EVENT_CANCEL) {
@@ -457,7 +456,7 @@ static int changePassword(int param) {
 int showAboutWallet(void) {
     char str[128], blename[32], sn[24];
     char device_name[32];
-    int ret = 0, os_verison;
+    int ret = 0, os_version;
     int width = 0;
 
     memset(str, 0x0, sizeof(str));
@@ -478,23 +477,20 @@ int showAboutWallet(void) {
 
     //type
     memset(str, 0x0, sizeof(str));
-    snprintf(str, sizeof(str), "%s: %s %s", res_getLabel(LANG_LABEL_PRODUCT_TYPE), PRODUCT_BRAND_VALUE,
-             PRODUCT_NAME_VALUE);
+    snprintf(str, sizeof(str), "%s: %s %s", res_getLabel(LANG_LABEL_PRODUCT_TYPE), PRODUCT_BRAND_VALUE, PRODUCT_NAME_VALUE);
     width = ddi_lcd_get_text_width(str);
     if (width > g_gui_info.uiScrWidth) {
-        snprintf(str, sizeof(str), "%s:\n%s %s", res_getLabel(LANG_LABEL_PRODUCT_TYPE), PRODUCT_BRAND_VALUE,
-                 PRODUCT_NAME_VALUE);
+        snprintf(str, sizeof(str), "%s:\n%s %s", res_getLabel(LANG_LABEL_PRODUCT_TYPE), PRODUCT_BRAND_VALUE, PRODUCT_NAME_VALUE);
     }
     SetWindowMText(0, str);
 
     //version
-    os_verison = ddi_sys_get_firmware_ver(OS_VER);
+    os_version = ddi_sys_get_firmware_ver(OS_VER);
     memset(str, 0x0, sizeof(str));
-    snprintf(str, sizeof(str), "%s: %s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_verison);
+    snprintf(str, sizeof(str), "%s: %s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_version);
     width = ddi_lcd_get_text_width(str);
     if (width > g_gui_info.uiScrWidth) {
-        snprintf(str, sizeof(str), "%s:\n%s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION,
-                 os_verison);
+        snprintf(str, sizeof(str), "%s:\n%s-%d", res_getLabel(LANG_LABEL_FIRMWARE_VERSION), DEVICE_APP_VERSION, os_version);
     }
     SetWindowMText(0, str);
 
@@ -531,73 +527,7 @@ int showAboutWallet(void) {
     }
     SetWindowMText(0, str);
 
-    ret = ShowWindowTxt(res_getLabel(LANG_LABEL_SET_ITEM_ABOUT), TEXT_ALIGN_LEFT,
-                        res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));
-    dwin_destory();
-
-    return ret;
-}
-
-static int other_info(void) {
-    int ret = -1;
-    uint32_t filelen = 0;
-    FILE_INFO_ST file_info;
-    uint8_t tmpbuf[128] = {0};
-    DynamicViewCtx *view;
-
-    memset((uint8_t * ) & file_info, 0x0, sizeof(FILE_INFO_ST));
-    ddi_flash_read(INTERNAL_APP_ADDR, (uint8_t * ) & file_info, sizeof(FILE_INFO_ST));
-
-    if (memcmp(file_info.identifier, "FILE_INFO", 9) != 0) {
-        ALOGE("file_info.identifier:%x,%x", file_info.identifier[0], file_info.identifier[1]);
-        return -1;
-    }
-
-    if (file_info.Image_ver < 10000) {
-        ALOGE("invalid Image_ver:%d", file_info.Image_ver);
-        return -3;
-    }
-
-    dwin_init();
-    snprintf(tmpbuf, sizeof(tmpbuf), "Date: %s\nTime: %s\nVoltage: %d\nBat Status: %d", file_info.Date, file_info.Time,
-             ddi_sys_bat_vol(), ddi_sys_bat_status());
-    view_add_txt(1, tmpbuf);
-
-    uint32_t os_verison, font_verison, label_verison, boot_verison, update_verison;
-    os_verison = ddi_sys_get_firmware_ver(OS_VER);
-    font_verison = ddi_sys_get_firmware_ver(FONT_VER);
-    label_verison = res_get_label_version();
-    boot_verison = ddi_sys_get_firmware_ver(BOOT_VER);
-    update_verison = ddi_sys_get_firmware_ver(RECOVERY_VER);
-    db_msg("os_verison:%d", os_verison);
-    db_msg("font_verison:%d", font_verison);
-    db_msg("label_verison:%d", label_verison);
-    db_msg("boot_verison:%d", boot_verison);
-    db_msg("update_verison:%d", update_verison);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "app_ver:%d", DEVICE_APP_INT_VERSION);
-    view_add_txt(0, tmpbuf);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "os_ver:%d", os_verison);
-    view_add_txt(0, tmpbuf);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "font_ver:%d", font_verison);
-    view_add_txt(0, tmpbuf);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "label_ver:%d", label_verison);
-    view_add_txt(0, tmpbuf);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "boot_ver:%d", boot_verison);
-    view_add_txt(0, tmpbuf);
-	
-    snprintf(tmpbuf, sizeof(tmpbuf), "update_ver:%d", update_verison);
-    view_add_txt(0, tmpbuf);
-
-    snprintf(tmpbuf, sizeof(tmpbuf), "ble state:%d", ddi_bt_get_status());
-    view_add_txt(0, tmpbuf);
-
-    ret = ShowWindowTxt(NULL, TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
-                        res_getLabel(LANG_LABEL_SUBMENU_OK));
+    ret = ShowWindowTxt(res_getLabel(LANG_LABEL_SET_ITEM_ABOUT), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));
     dwin_destory();
 
     return ret;
@@ -671,14 +601,12 @@ static int updateFirmware(void) {
             } else {
                 tips = "Invalid firmware.";
             }
-            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER,
-                          res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+            gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
         } else {
             db_msg("prepare upgrade OK,t:%d", t);
             gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), res_getLabel(LANG_LABEL_FOUND_FW_TIPS), TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
             if (gHaveSeed) {
-                if (checkPasswdKeyboard(0, res_getLabel(LANG_LABEL_ENTER_PASSWD),
-                                        PASSKB_FLAG_RANDOM | PASSKB_FLAG_NOT_SWITCH_GUIDE) != 0) {
+                if (checkPasswdKeyboard(0, res_getLabel(LANG_LABEL_ENTER_PASSWD), PASSKB_FLAG_RANDOM | PASSKB_FLAG_NOT_SWITCH_GUIDE) != 0) {
                     if (!gHaveSeed) {
                         passwd_error = 1;
                     }

@@ -167,6 +167,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_TAIKO_721 ||
                 msg->token.type == COIN_TYPE_KAVA_721 ||
                 msg->token.type == COIN_TYPE_SCROLL_721 ||
+                msg->token.type == COIN_TYPE_SEIEVM_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -209,6 +210,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_TAIKO_721 ||
                 msg->token.type == COIN_TYPE_KAVA_721 ||
                 msg->token.type == COIN_TYPE_SCROLL_721 ||
+                msg->token.type == COIN_TYPE_SEIEVM_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }

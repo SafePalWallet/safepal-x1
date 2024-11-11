@@ -286,11 +286,12 @@ int wallet_initDefaultCoin(const unsigned char *passwd) {
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BITCOIN, COIN_UNAME_BTC2); //BTC bip49
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BITCOIN, COIN_UNAME_BTC3); //BTC bip84
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_ETH, "ETH");
-    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BNC, "BNB");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BEP20, "BNB");
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_TON, "TON");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_POLYGON, "MATIC");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_TRX, "TRX");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_ARBITRUM, "ARETH");
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BNC, "BNB");
     return 0;
 }
 

@@ -38,11 +38,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 	view->flag |= 0x1;
 
-	const CoinConfig *config = getCoinConfig(msg->coin.type, msg->coin.uname);
-	if (!config) {
-		db_error("invalid coin");
-		return -2;
-	}
+    const CoinConfig *config = getCoinConfig(msg->coin.type, msg->coin.uname);
+    if (!config) {
+        if (msg->coin.type != COIN_TYPE_CUSTOM_EVM && msg->coin.category != COIN_CATEGORY_EVM) {
+            db_error("invalid coin");
+            return -2;
+        }
+    }
 
 	int coin_type = msg->coin.type;
 	db->coin_type = coin_type;
