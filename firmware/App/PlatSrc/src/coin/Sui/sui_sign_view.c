@@ -65,10 +65,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
 		name = msg->action.nft.name;
 		symbol = msg->action.nft.name;
-	} else{
-	    db_error("not support operation_type");
-		return -2;
-	}
+    } else if ((char) msg->operation_type == SUI_SWAP) {
+        name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+        symbol = "Swap";
+    } else {
+        db_error("not support operation_type");
+        return -2;
+    }
 	
 	const CoinConfig *mainConfig = getCoinConfig(msg->coin.type, "SUI");
 	if (!mainConfig) {
@@ -184,7 +187,17 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 
 		view->total_height = 2 * SCREEN_HEIGHT;
-	}
+    } else if ((char) msg->operation_type == SUI_SWAP) {
+        view->coin_symbol = symbol;
+        db->tx_type = TX_TYPE_APP_SIGN_MSG;
+        view->total_height = SCREEN_HEIGHT;
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
+
+        if (mainConfig) {
+            view_add_txt(TXS_LABEL_MAXID, "Chain:");
+            view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+        }
+    }
 
 	db_msg("coin_type:%d", coin_type);
 	db_msg("name:%s", name);

@@ -712,8 +712,6 @@ int procDeviceState(void) {
         return -3;
     }
 
-    uint32_t os_version = ddi_sys_get_firmware_ver(OS_VER);
-    db_msg("os_version:%d, app_verison:%d", os_version, DEVICE_APP_INT_VERSION);
     pbc_wmessage_integer(wmsg, "version", DEVICE_APP_INT_VERSION, 0);
 
     if (device_get_active_time() == 0) {

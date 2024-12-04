@@ -263,7 +263,7 @@ static int showDownloadAppQR(void) {
 static int activeDevice(void) {
     int status = 0, notifyTick = 0;
     uint32_t key;
-    uint8_t recvBuff[600] = {0};
+    uint8_t tmpbuf[600] = {0};
     uint32_t bt_status = 0, enc_state = 0, cnt = 0, brush_face = 0, brush_tip = 1;
     int ret = -1, btStatus = 0, notifyCnt = 0, recvLen = 0, brushBarCnt = 1;
     uint8_t mode = LE_PAIRING_SEC_CONNECT_NUMERIC, encStatus = 0;
@@ -272,9 +272,24 @@ static int activeDevice(void) {
     ddi_bt_open();
     status = STAT_BT_INIT;
 
-    ret = gui_disp_info(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_USER_ACTIVE_TIPS),
-                        TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
-    if (ret != EVENT_OK && ret != EVENT_KEY_F1) {
+    dwin_init();
+    snprintf(tmpbuf, sizeof(tmpbuf), "%s:", res_getLabel(LANG_LABEL_CONNECT_WITH_APP));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "1. %s", res_getLabel(LANG_LABEL_OPEN_THE_APP));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "2. %s", res_getLabel(LANG_LABEL_CONNECT_HW_WALLET));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "3. %s", res_getLabel(LANG_LABEL_SELECT_X1));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "4. %s", res_getLabel(LANG_LABEL_TAP_NEXT));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "5. %s", res_getLabel(LANG_LABEL_FINISH_PAIRING));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    snprintf(tmpbuf, sizeof(tmpbuf), "6. %s", res_getLabel(LANG_LABEL_TAP_ACTIVE));
+    dwin_add_txt(NULL, 0, 0, tmpbuf);
+    ret = ShowWindowTxt(res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));
+    dwin_destory();
+    if (ret != 0 && ret != RETURN_DISP_MAINPANEL) {
         return KEY_EVENT_BACK;
     }
 
@@ -408,13 +423,13 @@ static int activeDevice(void) {
                     db_msg("bt has been disconnected");
                     break;
                 }
-                memset(recvBuff, 0x0, sizeof(recvBuff));
-                recvLen = onBtRecvData(recvBuff, sizeof(recvBuff));
+                memset(tmpbuf, 0x0, sizeof(tmpbuf));
+                recvLen = onBtRecvData(tmpbuf, sizeof(tmpbuf));
                 if (recvLen > 0) {
                     db_msg("recvLen:%d", recvLen);
                     notifyCnt = PROC_BLE_NOTIFY_CNT;
                     BtRecvInit();
-                    ret = onBtResult(recvBuff, recvLen);
+                    ret = onBtResult(tmpbuf, recvLen);
                     db_msg("onBtResult ret:%d", ret);
                     if (ret == WINDOWID_QRPROC) {
                         status = STAT_TRANS_PROC;
