@@ -37,35 +37,36 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     coin_type = msg->coin.type;
     coin_uname = msg->coin.uname;
 
-    if ((char) msg->operation_type == ALPH_TRANSFER || (char) msg->operation_type == ALPH_TOKEN_TRANSFER || (char) msg->operation_type == ALPH_DAPP) {
-        if (msg->operation_type == ALPH_TRANSFER) {
-            config = getCoinConfig(coin_type, coin_uname);
-            if (!config) {
-                db_msg("not config type:%d name:%s", msg->coin.type, msg->coin.uname);
-                name = msg->coin.uname;
-                symbol = msg->coin.uname;
-                coin_decimals = 18;
-            } else {
-                name = config->name;
-                symbol = config->symbol;
-                coin_decimals = config->decimals;
-            }
-        } else if ((char) msg->operation_type == ALPH_TOKEN_TRANSFER) { // token
-            if (is_empty_string(msg->token.name) || is_empty_string(msg->token.symbol)) {
-                db_error("invalid token name:%s or symbol:%s", msg->token.name, msg->token.symbol);
-                return -2;
-            }
-            db_msg("msg->token.name:%s", msg->token.name);
-            db_msg("msg->token.symbol:%s", msg->token.symbol);
-            db_msg("msg->token.decimals:%d", msg->token.decimals);
-
-            name = msg->token.name;
-            symbol = msg->token.symbol;
-            coin_decimals = msg->token.decimals;
-        } else if ((char) msg->operation_type == ALPH_DAPP) {
-            name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-            symbol = msg->action.dapp.appName;
+    if (msg->operation_type == ALPH_TRANSFER) {
+        config = getCoinConfig(coin_type, coin_uname);
+        if (!config) {
+            db_msg("not config type:%d name:%s", msg->coin.type, msg->coin.uname);
+            name = msg->coin.uname;
+            symbol = msg->coin.uname;
+            coin_decimals = 18;
+        } else {
+            name = config->name;
+            symbol = config->symbol;
+            coin_decimals = config->decimals;
         }
+    } else if ((char) msg->operation_type == ALPH_TOKEN_TRANSFER) { // token
+        if (is_empty_string(msg->token.name) || is_empty_string(msg->token.symbol)) {
+            db_error("invalid token name:%s or symbol:%s", msg->token.name, msg->token.symbol);
+            return -2;
+        }
+        db_msg("msg->token.name:%s", msg->token.name);
+        db_msg("msg->token.symbol:%s", msg->token.symbol);
+        db_msg("msg->token.decimals:%d", msg->token.decimals);
+
+        name = msg->token.name;
+        symbol = msg->token.symbol;
+        coin_decimals = msg->token.decimals;
+    } else if ((char) msg->operation_type == ALPH_DAPP) {
+        name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+        symbol = msg->action.dapp.appName;
+    } else if ((char) msg->operation_type == ALPH_NFT) {
+        name = msg->action.sendCoins.appName;
+        symbol = msg->action.sendCoins.appName;
     } else {
         db_error("invalid type");
         return -3;
@@ -102,6 +103,39 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, "Alephium");
         view_add_txt(0, "Data:");
         view_add_txt(0, msg->action.dapp.content);
+    } else if ((char) msg->operation_type == ALPH_NFT) {
+        view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
+        view_add_txt(0, symbol);
+
+        view_add_txt(0, "Contract");
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        omit_string(tmpbuf, msg->action.sendCoins.contract, 8, 8);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
+        omit_string(tmpbuf, tmpbuf, 26, 11);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        omit_string(tmpbuf, msg->action.sendCoins.to, 26, 11);
+        view_add_txt(0, tmpbuf);
+
+        coin_decimals = 18;
+        view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+        ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes,
+                            msg->action.sendCoins.fee.size, coin_decimals, &send_value, tmpbuf,
+                            sizeof(tmpbuf));
+        db_msg("fee send_value:%.8lf", send_value);
+        snprintf(tmpbuf, sizeof(tmpbuf), "%s ALPH", tmpbuf);
+        db_msg("feed value:%s", tmpbuf);
+        view_add_txt(0, tmpbuf);
+
+        view_add_txt(0, "Chain:");
+        view_add_txt(0, "Alephium");
     }
 
     db->coin_type = coin_type;
