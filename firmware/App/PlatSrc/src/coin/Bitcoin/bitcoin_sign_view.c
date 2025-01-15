@@ -114,16 +114,20 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			}
 			for (int i = 0; i < msg->output_n; i++) {
 				value = msg->outputs[i].value;
-				if (is_empty_string(msg->outputs[i].address)) {
-					err = 130;
-					db_error("invalid input no:%d value:%lld", i, value);
-					break;
-				}
-				if (!check_add_value(&out_value, value)) {
-					err = 131;
-					db_error("invalid output no:%d value:%lld", i, value);
-					break;
-				}
+                if (is_empty_string(msg->outputs[i].address) && msg->outputs[i].value == 0 && msg->outputs[i].op_return_data.size != 0) {
+                    //BTC memo
+                } else {
+                    if (is_empty_string(msg->outputs[i].address)) {
+                        err = 130;
+                        db_error("invalid input no:%d value:%lld", i, value);
+                        break;
+                    }
+                    if (!check_add_value(&out_value, value)) {
+                        err = 131;
+                        db_error("invalid output no:%d value:%lld", i, value);
+                        break;
+                    }
+                }
 				if (msg->outputs[i].flag & BITCOIN_OUTPUT_FLAG_CHANGE) {
 					if (change_item_index != -1) {
 						err = 132;
@@ -257,7 +261,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 			int item_index = 0;
 			for (int i = 0; i < msg->output_n; i++) {
-				if (!(msg->outputs[i].flag & BITCOIN_OUTPUT_FLAG_CHANGE)) {
+                if ((!(msg->outputs[i].flag & BITCOIN_OUTPUT_FLAG_CHANGE)) && (msg->outputs[i].value != 0)) {//BTC memo value is 0
 					if (out_item_count > 1) {
 						snprintf(tmpbuf, sizeof(tmpbuf), res_getLabel(LANG_LABEL_TXS_PAYTO_INDEX), item_index + 1);
 					} else {

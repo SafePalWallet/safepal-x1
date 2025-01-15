@@ -17,6 +17,8 @@ typedef struct {
     char client_name[CLIENT_NAME_MAX_LEN + 1];
 } ClientInfo;
 
+/*
+ * old
 typedef struct {
     uint8_t type;
     uint8_t curv;
@@ -26,6 +28,19 @@ typedef struct {
     char name[COIN_NAME_BUFFSIZE];
     char symbol[COIN_SYMBOL_BUFFSIZE];
     int32_t flag;
+} DBCoinInfo;
+*/
+
+//new
+//if curv==0, DBCoinInfo is old.
+typedef struct {
+    uint16_t type;
+    uint8_t decimals;
+    uint8_t curv;
+    char uname[COIN_UNAME_BUFFSIZE];
+    char name[COIN_NAME_BUFFSIZE];
+    char symbol[COIN_SYMBOL_BUFFSIZE];
+    int32_t flag; //0:hide 1:show 0x100:universal evm
 } DBCoinInfo;
 
 typedef struct {
