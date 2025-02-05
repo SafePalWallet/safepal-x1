@@ -4,7 +4,7 @@
 #include "coin_util.h"
 #include "cstr.h"
 
-#define SM_ERROR_TOO_MUCH_CLIENT (-201)
+#define SM_ERROR_TOO_MUCH_CLIENT (-301)
 #define CLIENT_SECKEY_SIZE    32
 #define CLIENT_NAME_MAX_LEN   31
 #define CLIENT_UNIQID_MAX_LEN  20

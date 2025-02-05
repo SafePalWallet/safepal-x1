@@ -544,6 +544,18 @@ static int updateFirmware(void) {
                       res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
         ddi_bt_ioctl(DDI_BT_CTL_BLE_CLEAR_FIFO, 0, 0);
         return -1;
+    } else {
+        int bat_status = ddi_sys_bat_status();
+        if (DDI_BAT_EXT_SUPPLY_CHARGING_ZERO_GRADE != bat_status &&
+            DDI_BAT_EXT_SUPPLY_CHARGING_ONE_GRADE != bat_status &&
+            DDI_BAT_EXT_SUPPLY_CHARGING_TWO_GRADE != bat_status &&
+            DDI_BAT_EXT_SUPPLY_CHARGING_THREE_GRADE != bat_status &&
+            DDI_BAT_EXT_SUPPLY_NONE_CHARGE != bat_status) {
+            db_msg("unplug usb");
+            gui_disp_info(res_getLabel(LANG_LABEL_ALERT), res_getLabel(LANG_LABEL_UPGRADE_BATTERY_TIPS2), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
+                          res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_NONE);
+            return -2;
+        }
     }
 
     ret = gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), res_getLabel(LANG_LABEL_OTA_BACKUP_PHRASES_TIPS), TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK),
@@ -594,6 +606,7 @@ static int updateFirmware(void) {
                 break;
             }
         }
+        loading_win_stop();
         if (ret != 0) {
             db_error("prepare upgrade false ret:%d", ret);
             if (ret == UPGRADE_FW_NOT_FOUND) {
@@ -617,6 +630,7 @@ static int updateFirmware(void) {
             settings_save(SETTING_KEY_OTA_PRE_VERSION, DEVICE_APP_INT_VERSION);
             ddi_usb_close();
             ret = ddi_ota_upgrade();
+            loading_win_stop();
             if (ret == 0) {
                 ddi_bt_disconnect();
                 ddi_bt_close();

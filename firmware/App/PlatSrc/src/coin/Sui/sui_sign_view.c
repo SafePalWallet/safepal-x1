@@ -54,9 +54,11 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
         name = msg->token.name;
         symbol = msg->token.symbol;
-    } else if ((char) msg->operation_type == SUI_DAPP || (char) msg->operation_type == SUI_MSG) {
-        name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-        symbol = msg->action.dapp.app_name;
+    } else if ((char) msg->operation_type == SUI_DAPP ||
+               (char) msg->operation_type == SUI_MSG ||
+               (char) msg->operation_type == SUI_SWAP2) {
+        name = "Data:";
+        symbol = res_getLabel(LANG_LABEL_TX_SIGN);
     } else if ((char) msg->operation_type == SUI_NFT) {
         if (is_empty_string(msg->action.nft.name) || is_empty_string(msg->action.nft.name)) {
             db_error("msg->action.nft.name null");
@@ -65,9 +67,6 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
         name = msg->action.nft.name;
         symbol = msg->action.nft.name;
-    } else if ((char) msg->operation_type == SUI_SWAP2) {
-        name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-        symbol = "Swap";
     } else {
         db_error("not support operation_type");
         return -2;
@@ -125,24 +124,11 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
         view->total_height = 2 * SCREEN_HEIGHT;
     } else if ((char) msg->operation_type == SUI_MSG || (char) msg->operation_type == SUI_DAPP) {
-        view->coin_symbol = res_getLabel(LANG_LABEL_SIGN_TRANSACTION);
+        view->coin_symbol = symbol;
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
         view->total_height = SCREEN_HEIGHT;
 
-        view_add_txt(TXS_LABEL_TOTAL_VALUE, "DApp:");
-        view_add_txt(TXS_LABEL_TOTAL_MONEY, symbol);
-
-        if (mainConfig) {
-            view_add_txt(TXS_LABEL_MAXID, "Chain:");
-            view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
-        }
-
-        view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
-        memset(tmpbuf, 0, sizeof(tmpbuf));
-        ret = wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
-        db_msg("my address ret:%d addr:%s", ret, tmpbuf);
-        view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
-
+        view_add_txt(TXS_LABEL_TOTAL_VALUE, name);
         view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.dapp.content);
     } else if ((char) msg->operation_type == SUI_NFT) {
         view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
@@ -190,12 +176,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view->coin_symbol = symbol;
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
         view->total_height = SCREEN_HEIGHT;
-        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
 
-        if (mainConfig) {
-            view_add_txt(TXS_LABEL_MAXID, "Chain:");
-            view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
-        }
+        view_add_txt(TXS_LABEL_TOTAL_VALUE, name);
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
     }
 
     db_msg("coin_type:%d", coin_type);

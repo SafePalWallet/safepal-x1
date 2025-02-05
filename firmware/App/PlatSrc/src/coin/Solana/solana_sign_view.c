@@ -121,15 +121,11 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
 		name = msg->action.compressedNFT.app_name;
 		symbol = msg->action.compressedNFT.app_name;
-	} else if((char)msg->operation_type==OP_TYPE_DAPP ){
-		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-		symbol = msg->action.dapp.app_name;
-	} else if((char)msg->operation_type==OP_TYPE_MSG){
-		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-		symbol = msg->action.msg.app_name;
-	} else if((char)msg->operation_type==OP_TYPE_SWAP){
-		name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
-		symbol = "Swap";
+    } else if ((char) msg->operation_type == OP_TYPE_DAPP ||
+               (char) msg->operation_type == OP_TYPE_MSG ||
+               (char) msg->operation_type == OP_TYPE_SWAP) {
+        name = "Data:";
+        symbol = res_getLabel(LANG_LABEL_TX_SIGN);
 	} else{
 		const CoinConfig *config = getCoinConfig(msg->coin.type, msg->coin.uname);
 		if (!config) {
@@ -310,47 +306,28 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_MAXID, mainConfig->symbol);
-	} else if ((char) msg->operation_type == OP_TYPE_DAPP) {
-		view->coin_symbol = res_getLabel(LANG_LABEL_SIGN_TRANSACTION);
-		db->tx_type = TX_TYPE_APP_SIGN_MSG;
-		view_add_txt(TXS_LABEL_TOTAL_VALUE, "DApp:");
-		view_add_txt(TXS_LABEL_TOTAL_MONEY, symbol);
+    } else if ((char) msg->operation_type == OP_TYPE_DAPP) {
+        view->coin_symbol = symbol;
+        db->tx_type = TX_TYPE_APP_SIGN_MSG;
 
-		if (mainConfig) {
-			view_add_txt(TXS_LABEL_MAXID, "Chain:");
-			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
-		}
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, name);
+        format_data_to_hex(msg->action.dapp.message_data.bytes, msg->action.dapp.message_data.size, str, sizeof(str));
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
+    } else if ((char) msg->operation_type == OP_TYPE_MSG) {
+        view->coin_symbol = symbol;
+        db->tx_type = TX_TYPE_APP_SIGN_MSG;
 
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, "Data:");
-		format_data_to_hex(msg->action.dapp.message_data.bytes, msg->action.dapp.message_data.size, str, sizeof(str));
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
-	} else if ((char) msg->operation_type == OP_TYPE_MSG) {
-		view->coin_symbol = "Sign Message";
-		db->tx_type = TX_TYPE_APP_SIGN_MSG;
-		view_add_txt(TXS_LABEL_TOTAL_VALUE, "DApp:");
-		view_add_txt(TXS_LABEL_TOTAL_MONEY, symbol);
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, name);
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.msg.message);
+    } else if ((char) msg->operation_type == OP_TYPE_SWAP) {
+        view->coin_symbol = symbol;
+        db->tx_type = TX_TYPE_APP_SIGN_MSG;
 
-		if (mainConfig) {
-			view_add_txt(TXS_LABEL_MAXID, "Chain:");
-			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
-		}
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, name);
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
+    } else {
 
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, "Data:");
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.msg.message);
-	} else if ((char)msg->operation_type == OP_TYPE_SWAP) {
-		view->coin_symbol = symbol;
-		db->tx_type = TX_TYPE_APP_SIGN_MSG;
-		view->total_height = SCREEN_HEIGHT;
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
-
-		if (mainConfig) {
-			view_add_txt(TXS_LABEL_MAXID, "Chain:");
-			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
-		}
-	} else {
-
-	}
-
+    }
 
 	db->coin_type = coin_type;
 	strlcpy(db->coin_name, name, sizeof(db->coin_name));

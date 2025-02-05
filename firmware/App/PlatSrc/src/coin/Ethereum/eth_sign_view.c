@@ -31,11 +31,6 @@ enum {
 	TXS_LABEL_SIMPLE_FEE_TITLE,
 	TXS_LABEL_SIMPLE_FEE_VALUE,
 	TXS_LABEL_APP_MSG_VALUE,
-    TXS_LABEL_CHAIN_TITLE,
-	TXS_LABEL_CHAIN_VALUE,
-	TXS_LABEL_NFT_NAME_TITLE,
-	TXS_LABEL_NFT_NAME_VALUE,
-    TXS_LABEL_NFT_MSG,
 	TXS_LABEL_MAXID,
 };
 
@@ -50,44 +45,6 @@ enum {
 #define APPROVE_ACTION_NFT_TOKEN_APPROVE        (9)
 #define APPROVE_ACTION_NFT_TOKEN_REVOKE_APPROVE (10)
 #define APPROVE_ACTION_MAX                      (11)
-
-static const char *get_approve_nft_action_title(int action, const char *title) {
-    if (action <= 0 || action >= APPROVE_ACTION_MAX) {
-        return title;
-    }
-    switch (action) {
-        case APPROVE_ACTION_NFT_APPROVE:
-        case APPROVE_ACTION_NFT_TOKEN_APPROVE:
-            title = "Approve";
-            break;
-        case APPROVE_ACTION_NFT_REVOKE_APPROVE:
-        case APPROVE_ACTION_NFT_TOKEN_REVOKE_APPROVE:
-            title = "Revoke Approval";
-            break;
-        case APPROVE_ACTION_NFT_MAKE_OFFER:
-            title = "Make Offer";
-            break;
-        case APPROVE_ACTION_NFT_BUY:
-            title = "Buy NFT";
-            break;
-        case APPROVE_ACTION_NFT_REVOKE_OFFER:
-            title = "Cancel Offer";
-            break;
-        case APPROVE_ACTION_NFT_LIST:
-            title = "List";
-            break;
-        case APPROVE_ACTION_NFT_REVOKE_LISTING:
-            title = "Cancel Listing";
-            break;
-        case APPROVE_ACTION_NFT_ACCEPT_OFFER:
-            title = "Accept Offer";
-            break;
-        default:
-            break;
-    }
-
-    return title;
-}
 
 #define TOKEN_EXTRA_TYPE_COIN     (1)
 #define TOKEN_EXTRA_TYPE_TOKEN    (2)
@@ -380,18 +337,20 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		} else {
 			coin_uname = "Dapp";
 		}
-        symbol = msg->contract.name;//show
         if (msg->sign_type == 1) {
             name = res_getLabel(LANG_LABEL_TX_METHOD_APPROVE);
+            symbol = msg->contract.name;//show
         } else if (msg->sign_type == 2) {
-            name = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
+            name = "Data:";
+            symbol = res_getLabel(LANG_LABEL_TX_SIGN);
         }
 
-        symbol = get_approve_nft_action_title(msg->nft_order_info.action, symbol);
-        if (is_not_empty_string(msg->nft_order_info.market_name)) {
-            name = msg->nft_order_info.market_name;
+        //NFT
+        if (msg->nft_order_info.action >= APPROVE_ACTION_NFT_APPROVE && msg->nft_order_info.action <= APPROVE_ACTION_NFT_TOKEN_REVOKE_APPROVE) {
+            name = "Data:";
+            symbol = res_getLabel(LANG_LABEL_TX_SIGN);
         }
-	}
+    }
 
 	db->coin_type = coin_type;
 	strlcpy(db->coin_name, name, sizeof(db->coin_name));
@@ -498,7 +457,6 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 if (parse_coin_path(&info, msg->coin.path) != 0 || info.hn < 3) {
                     db_error("invalid coin type:%d uname:%s path:%s", msg->coin.type, msg->coin.uname, msg->coin.path);
                     return -2;
-
                 }
 
                 db_msg("info.hn:%d,%d,%d", info.hn, info.hvalues[0], info.hvalues[info.hn - 1]);
@@ -666,98 +624,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		} else {
 			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
 		}
-	} else if (msg->sign_type == 2) { //app message
-        //title
-        if (msg->nft_order_info.action >= APPROVE_ACTION_NFT_APPROVE && msg->nft_order_info.action < APPROVE_ACTION_MAX) {
-		    view->coin_symbol = symbol;
-        } else {
-		    view->coin_symbol = res_getLabel(LANG_LABEL_SIGN_TRANSACTION);
-            if(strcmp(symbol, "Stake") && strcmp(symbol, "Unstake")) {
-                view_add_txt(TXS_LABEL_TOTAL_VALUE, "DApp:");
-                view_add_txt(TXS_LABEL_TOTAL_MONEY, symbol);
-            }
-        }
-
-        view_add_txt(TXS_LABEL_NFT_ID_TITLE, "Chain:");
-        if (coin_type == COIN_TYPE_CUSTOM_EVM) {
-            view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
-        } else {
-			if (config) {
-            	view_add_txt(TXS_LABEL_NFT_ID_VALUE, config->name);
-			} else {
-            	view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
-			}
-        }
-		
-		// view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
-		// memset(tmpbuf, 0, sizeof(tmpbuf));
-		// ret = wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
-		// db_msg("my address ret:%d addr:%s", ret, tmpbuf);
-		// view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
-
-        if (msg->nft_order_info.action >= APPROVE_ACTION_NFT_APPROVE && msg->nft_order_info.action < APPROVE_ACTION_MAX) {
-            if (msg->nft_order_info.action == APPROVE_ACTION_NFT_LIST ||
-                msg->nft_order_info.action == APPROVE_ACTION_NFT_REVOKE_LISTING ||
-                msg->nft_order_info.action == APPROVE_ACTION_NFT_ACCEPT_OFFER ||
-                msg->nft_order_info.action == APPROVE_ACTION_NFT_APPROVE ||
-                msg->nft_order_info.action == APPROVE_ACTION_NFT_REVOKE_APPROVE) {
-                view_add_txt(TXS_LABEL_NFT_NAME_TITLE, "Item:");
-                view_add_txt(TXS_LABEL_NFT_NAME_VALUE, msg->nft_order_info.nft_name);
-            } else if (msg->nft_order_info.action == APPROVE_ACTION_NFT_MAKE_OFFER ||
-                       msg->nft_order_info.action == APPROVE_ACTION_NFT_REVOKE_OFFER) {
-                view_add_txt(TXS_LABEL_NFT_NAME_TITLE, "Offer Price:");
-                memzero(tmpbuf, sizeof(tmpbuf));
-                snprintf(tmpbuf, sizeof(tmpbuf), "%s %s", msg->nft_order_info.price, msg->nft_order_info.price_symbol);
-                view_add_txt(TXS_LABEL_NFT_NAME_VALUE, tmpbuf);
-            } else if (msg->nft_order_info.action == APPROVE_ACTION_NFT_BUY) {
-                view_add_txt(TXS_LABEL_NFT_NAME_TITLE, "Amount:");
-                memzero(tmpbuf, sizeof(tmpbuf));
-                snprintf(tmpbuf, sizeof(tmpbuf), "%s %s", msg->nft_order_info.price, msg->nft_order_info.price_symbol);
-                view_add_txt(TXS_LABEL_NFT_NAME_VALUE, tmpbuf);
-            } else if (msg->nft_order_info.action == APPROVE_ACTION_NFT_TOKEN_APPROVE ||
-                       msg->nft_order_info.action == APPROVE_ACTION_NFT_TOKEN_REVOKE_APPROVE) {
-                view_add_txt(TXS_LABEL_CHAIN_TITLE, "Currency:");
-                view_add_txt(TXS_LABEL_CHAIN_VALUE, msg->nft_order_info.price_symbol);
-            }
-        } else {
-            view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
-            memset(tmpbuf, 0, sizeof(tmpbuf));
-            tmpbuf[0] = '0';
-            tmpbuf[1] = 'x';
-            if (is_transfer) {
-                ethereum_address_checksum(msg->data.bytes + 16, tmpbuf + 2, false, 0);
-            } else if (is_1155_transfer || is_transfer_from) {
-                ethereum_address_checksum(msg->data.bytes + 48, tmpbuf + 2, false, 0);
-            } else if (msg->to.size > 0) {
-                ethereum_address_checksum(msg->to.bytes, tmpbuf + 2, false, 0);
-            } else {
-                tmpbuf[0] = 0;
-            }
-            view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
-        }
-
-		view->flag |= 0x1;
-		//fee
-		view_add_txt(TXS_LABEL_SIMPLE_FEE_TITLE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		format_coin_real_value(tmpbuf, sizeof(tmpbuf), msg->gas_limit * msg->gas_price, 18);
-		db_msg("feed value:%s", tmpbuf);
-		view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, tmpbuf);
-		if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
-			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
-		} else {
-			if (config) {
-				view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
-			} else {
-				view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
-			}
-		}
-        
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, "Data:");
-		db->tx_type = TX_TYPE_APP_SIGN_MSG;
-		format_data_to_hex(msg->data.bytes, msg->data.size, tmpbuf, 50);
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, tmpbuf);
-	}
-	
+    } else if (msg->sign_type == 2) { //app message
+        view->coin_symbol = symbol;
+        view->flag |= 0x1;
+        db->tx_type = TX_TYPE_APP_SIGN_MSG;
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, name);
+        format_data_to_hex(msg->data.bytes, msg->data.size, tmpbuf, 50);
+        view_add_txt(TXS_LABEL_APP_MSG_VALUE, tmpbuf);
+    }
 
 	//save coin info
     if ((trans_token || (msg->token.extra_type == TOKEN_EXTRA_TYPE_COIN)) && coin_type && view->msg_from == MSG_FROM_QR_APP && (coin_type != COIN_TYPE_CUSTOM_EVM)) {
