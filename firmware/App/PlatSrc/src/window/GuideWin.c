@@ -1407,6 +1407,7 @@ int startGuide(void) {
                         ret = wallet_verify_mnemonic((const unsigned char *) mnenonics, strlen(mnenonics), passhash);
                         db_secure("verify mnemonic ret:%d", ret);
                         if (ret != 0) {
+                            ret = -500 + ret;
                             settings_set_have_seed(0);
                         }
                     }
@@ -1415,6 +1416,7 @@ int startGuide(void) {
                         ret = wallet_verify_seed_xpub(seedbin, 64);
                         db_secure("verify seed xpub ret:%d", ret);
                         if (ret != 0) {
+                            ret = -600 + ret;
                             settings_set_have_seed(0);
                         }
                     }

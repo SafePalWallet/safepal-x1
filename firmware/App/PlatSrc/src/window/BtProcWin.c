@@ -886,6 +886,7 @@ int procActiveDevice(void) {
     if (req.type == DEVICE_ACTIVE_REQUEST_URL) {
         loading_win_start(0, res_getLabel(LANG_LABEL_USER_ACTIVE_TITLE), res_getLabel(LANG_LABEL_ACTIVATING), 0);
         urlLen = active_get_url(buff, 128);
+        loading_win_stop();
         db_msg("active_get_url ret:%d", urlLen);
         if (urlLen <= 0) {
             db_error("invalid url urlLen:%d", urlLen);
@@ -998,7 +999,7 @@ void dispMainPanel(int page) {
 int dispPairCode(void) {
     uint8_t key[4] = {0}, disp[32] = {0}, str[64] = {0};
     uint32_t number = 0;
-    int ret = 0, status = STAT_BT_INIT;
+    int ret = 0, status = STAT_BT_ENCRY_STATE;
 
     ddi_bt_ioctl(DDI_BT_CTL_BLE_GET_CONFIRM_KEY, 0, (uint32_t) key);
     number = ((*(key + 0)) << 0) | ((*(key + 1)) << 8) | ((*(key + 2)) << 16) | ((*(key + 3)) << 24);
