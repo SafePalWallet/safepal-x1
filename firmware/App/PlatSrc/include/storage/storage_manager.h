@@ -107,5 +107,11 @@ int storage_set_coin_max_index(uint64_t account_id, int coin_id, int new_index);
 
 int storage_checkExistClientId(void);
 
+int storage_get_version();
+
+int storage_save_config_int(const char *key, int value);
+
+int storage_get_config_int(const char *key, int default_val);
+
 #endif 
 

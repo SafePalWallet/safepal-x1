@@ -293,6 +293,10 @@ int wallet_initDefaultCoin(const unsigned char *passwd) {
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_ARBITRUM, "ARETH");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_SOLANA, "SOL");
     wallet_genDefaultPubHDNode(passwd, COIN_TYPE_SOLANA, COIN_UNAME_SOL2);
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_ERC20, "USDT");
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_TRC20, "USDT");
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_ERC20, "USDC");
+    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BEP20, "SFP");
 //    wallet_genDefaultPubHDNode(passwd, COIN_TYPE_BNC, "BNB");
     return 0;
 }
@@ -320,7 +324,7 @@ int wallet_storeSeed(unsigned char *seed, int seedlen, const unsigned char *pass
     int ret = sapi_store_seed(seed, seedlen, passwd, PASSWD_HASHED_LEN);
     if (ret != 0) {
         db_serr("store seed ret:%d", ret);
-        return ret;
+        return (-400 + ret);
     }
     gui_on_process(30);
     uint64_t id = wallet_getAccountId(1);
@@ -363,7 +367,6 @@ int wallet_store_passphrase(const unsigned char *passphrase, int len, const unsi
         db_serr("set passphrase false ret:%d", ret);
         return ret;
     }
-    gui_on_process(30);
     gSeedAccountId = 0;
     uint64_t id = wallet_getAccountId(1);
     if (!id) {
@@ -371,9 +374,7 @@ int wallet_store_passphrase(const unsigned char *passphrase, int len, const unsi
         return -41;
     }
     settings_set_have_seed(id);
-    gui_on_process(60);
     wallet_initDefaultCoin(passwd);
-    gui_on_process(90);
     return 0;
 }
 

@@ -131,6 +131,14 @@ const char *getTypeUname(uint8_t type, char symbol[], char uname[], cstring *tx_
             name = "Moonbeam";
         } else if (!strcmp(coinConfig->name, "xDAI(Gnosis)")) {
             name = "Gnosis";
+        } else if (type == COIN_TYPE_VICTION) {
+            name = strcmp(uname, "VIC") ? "VRC20" : "Viction";
+        } else if (type == COIN_TYPE_VICTION_21) {
+            name = "VRC21";
+        } else if (type == COIN_TYPE_VICTION_25) {
+            name = "VRC25";
+        } else if (coinConfig->type == COIN_TYPE_BEP20 && !strcmp(coinConfig->name, "SafePal Token")) {
+            name = "BEP20";
         } else {
             name = coinConfig->name;
         }
@@ -272,8 +280,7 @@ static int refreshItemList(int init_select) {
             }
             db_msg("mCoinName[%d]:%s", i, typeName->str);
             mCoinMenu[i].pMenuText = (char *)mCoinName[i];
-            db_msg("mCoinMenu[%d]:%s name:%s symbol:%s type:%d", i, mCoinMenu[i].pMenuText, mItems[i].name,
-                   mItems[i].symbol, mItems[i].type);
+            db_msg("mCoinMenu[%d]:%s name:%s symbol:%s type:%d", i, mCoinMenu[i].pMenuText, mItems[i].name, mItems[i].symbol, mItems[i].type);
 
             memset(&mTypeUname[i], 0x0, sizeof(type_uname));
             mTypeUname[i].type = mItems[i].type;

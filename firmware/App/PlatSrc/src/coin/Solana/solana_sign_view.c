@@ -50,49 +50,6 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 	memset(db, 0, sizeof(DBTxCoinInfo));
 	memset(tmpbuf, 0, sizeof(tmpbuf));
 
-
-#if 0
-	db_msg("-------------------------------");
-	db_msg("msg->coin.type:%x", (int)msg->coin.type);
-	db_msg("msg->coin.uname:%s", msg->coin.uname);
-	db_msg("msg->exchange.amount:%d", (int)msg->exchange.amount);
-	db_msg("msg->exchange.currency:%s", msg->exchange.currency);
-	db_msg("msg->exchange.symbol:%s", msg->exchange.symbol);
-	db_msg("msg->exchange.value:%lld", (unsigned long long)msg->exchange.value);
-	
-	if((char)msg->operation_type == OP_TYPE_TRANSFER){
-		db_msg("msg->action.transfer.recipient:%s", msg->action.transfer.recipient);
-		db_msg("msg->action.transfer.value:%lld", (long long)msg->action.transfer.value);
-	}
-	else if(((char)msg->operation_type==OP_TYPE_TOKENTRANSFER) || \
-		((char)msg->operation_type==OP_TYPE_CREATE_AND_TRANSFER)){
-		db_msg("msg->action.token_transfer.to:%s", msg->action.token_transfer.to);
-		db_msg("msg->action.token_transfer.tokenMintAddress:%s", msg->action.token_transfer.token_mint_address);
-		db_msg("msg->action.token_transfer.sender_token_address:%s", msg->action.token_transfer.sender_token_address);
-		db_msg("msg->action.token_transfer.recipient_token_address:%s", msg->action.token_transfer.recipient_token_address);
-		db_msg("msg->action.token_transfer.amount:%lld", (long long)msg->action.token_transfer.amount);
-		db_msg("msg->action.token_transfer.decimals:%d", (int)msg->action.token_transfer.decimals);
-	}
-	else if((char)msg->operation_type == OP_TYPE_DAPP){
-		db_msg("msg->action.dapp.app_name:%s", msg->action.dapp.app_name);
-		db_msg("msg->action.dapp.message_data.size:%d", msg->action.dapp.message_data.size);
-		db_msg("msg->action.dapp.type:%d", msg->action.dapp.type);
-	} 
-	else if(((char)msg->operation_type==OP_TYPE_NFT_TRANSFER) || \
-		((char)msg->operation_type==OP_TYPE_NFT_CREATE_AND_TRANSFER)){
-		db_msg("msg nft  app_name:%s", msg->action.token_transfer.app_name);
-		db_msg("msg nft  to:%s", msg->action.token_transfer.to);
-		db_msg("msg nft  tokenMintAddress:%s", msg->action.token_transfer.token_mint_address);
-		db_msg("msg nft  sender_token_address:%s", msg->action.token_transfer.sender_token_address);
-		db_msg("msg nft  recipient_token_address:%s", msg->action.token_transfer.recipient_token_address);
-		db_msg("msg nft  amount:%lld", (long long)msg->action.token_transfer.amount);
-		db_msg("msg nft  decimals:%d", (int)msg->action.token_transfer.decimals);
-		db_msg("msg nft  fee:%d", (int)msg->action.token_transfer.fee);
-		db_msg("msg nft transfer  fee:%d", (int)msg->action.transfer.fee);
-	}
-	db_msg("-------------------------------");
-#endif
-
 	coin_type = msg->coin.type;
 	coin_uname = msg->coin.uname;
 	if (((char)msg->operation_type==OP_TYPE_TOKENTRANSFER) || ((char)msg->operation_type==OP_TYPE_CREATE_AND_TRANSFER) || 
@@ -113,6 +70,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
 		name = msg->action.token_transfer.app_name;
 		symbol = msg->action.token_transfer.app_name;
+	} else if ((char)msg->operation_type==OP_TYPE_MNFT) {
+		if (is_empty_string(msg->action.mNFT.app_name) || is_empty_string(msg->action.mNFT.app_name)) {
+			db_error("msg->action.mNFT.app_name null");
+			return -1;
+		}
+		
+		name = msg->action.mNFT.app_name;
+		symbol = msg->action.mNFT.app_name;
 	} else if ((char)msg->operation_type==OP_TYPE_COMPRESSED_NFT_TRANSFER) {
 		if (is_empty_string(msg->action.compressedNFT.app_name) || is_empty_string(msg->action.compressedNFT.app_name)) {
 			db_error("msg->action.compressedNFT.app_name null");
@@ -246,8 +211,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 				}
 			}
 		}
-	} else if (((char) msg->operation_type == OP_TYPE_NFT_TRANSFER) || \
-        ((char) msg->operation_type == OP_TYPE_NFT_CREATE_AND_TRANSFER)) {
+	} else if (((char) msg->operation_type == OP_TYPE_NFT_TRANSFER) || 
+        ((char) msg->operation_type == OP_TYPE_NFT_CREATE_AND_TRANSFER || 
+		(char) msg->operation_type == OP_TYPE_MNFT
+	)) {
 		view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
 		view_add_txt(TXS_LABEL_MAXID, symbol);
 
@@ -255,12 +222,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 		char tmpbuf[128];
 		memset(tmpbuf, 0, sizeof(tmpbuf));
-		memcpy(tmpbuf, msg->action.token_transfer.token_mint_address, 7);
+		const char *mint = msg->operation_type == OP_TYPE_MNFT ? 
+		msg->action.mNFT.token_mint_address : msg->action.token_transfer.token_mint_address;
+		memcpy(tmpbuf, mint, 7);
 		tmpbuf[7] = '.';
 		tmpbuf[8] = '.';
 		tmpbuf[9] = '.';
-		int len = strlen(msg->action.token_transfer.token_mint_address);
-		memcpy(tmpbuf + 10, msg->action.token_transfer.token_mint_address + (len - 8), 8);
+		int len = strlen(mint);
+		memcpy(tmpbuf + 10, mint + (len - 8), 8);
 		db_msg("tmpbuf:%s", tmpbuf);
 		view_add_txt(TXS_LABEL_TOTAL_MONEY, tmpbuf);
 
@@ -275,11 +244,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
 
 		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
-		omit_string(tmpbuf, msg->action.transfer.recipient, 26, 11);
+		const char *recipient = msg->operation_type == OP_TYPE_MNFT ?
+		msg->action.mNFT.recipient : msg->action.token_transfer.to;
+		omit_string(tmpbuf, recipient, 26, 11);
 		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
 
 		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		send_amount = msg->action.token_transfer.fee;
+		send_amount = msg->operation_type == OP_TYPE_MNFT ?
+		msg->action.mNFT.fee : msg->action.token_transfer.fee;
 		format_coin_real_value(tmpbuf, sizeof(tmpbuf), send_amount, 9);
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		view_add_txt(TXS_LABEL_MAXID, mainConfig->symbol);

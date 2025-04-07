@@ -491,13 +491,11 @@ int PassphraseGuide(void) {
                 }
                 loading_win_start(0, res_getLabel(LANG_LABEL_INIT_WALLET_ING),
                                   res_getLabel(LANG_LABEL_INIT_WALLET_TIPS), 0);
-                gui_on_process(10);
                 ret = wallet_store_passphrase((const unsigned char *) passphrase_val, strlen(passphrase_val), passhash);
                 if (ret == 0) {
                     loading_win_refresh();
                     wallet_gen_exists_hdnode(passhash, old_account_id);
                 }
-                gui_on_process(100);
                 loading_win_stop();
                 if (ret == 0) {
                     popData(stack);

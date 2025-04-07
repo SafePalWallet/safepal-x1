@@ -351,7 +351,6 @@ int confirmBindAccount(void) {
             err = 1;
             break;
         } else {
-            loading_win_start(0, res_getLabel(LANG_LABEL_BIND_WALLET), NULL, 0);
             break;
         }
     } while (1);
@@ -360,6 +359,7 @@ int confirmBindAccount(void) {
         return ret;
     }
 
+    loading_win_start(0, NULL, res_getLabel(LANG_LABEL_BIND_WALLET), 0);
     do {
         ClientInfo client;
         memset(&client, 0, sizeof(ClientInfo));
@@ -426,6 +426,7 @@ int confirmBindAccount(void) {
             if (client_id <= 0) {
                 db_error("save client error ret:%d", client_id);
                 if (client_id == SM_ERROR_TOO_MUCH_CLIENT) {
+                    loading_win_stop();
                     dialog_error3(0, client_id, "Pair failed.");
                     break;
                 } else {
@@ -519,6 +520,7 @@ int confirmBindAccount(void) {
         rst = showQRWindow(0, 0, mMessage->flag, QR_MSG_BIND_ACCOUNT_RESP, (const unsigned char *) result.buffer,
                            result.len);
     } while (0);
+    loading_win_stop();
     db_msg("done clean bufer");
     memzero(passhash, PASSWD_HASHED_LEN);
     memzero(tmpbuf, sizeof(tmpbuf));

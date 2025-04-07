@@ -34,6 +34,8 @@ enum {
 	TXS_LABEL_MAXID,
 };
 
+static char mName[COIN_NAME_BUFFSIZE];
+
 #define APPROVE_ACTION_NFT_APPROVE              (1)
 #define APPROVE_ACTION_NFT_REVOKE_APPROVE       (2)
 #define APPROVE_ACTION_NFT_MAKE_OFFER           (3)
@@ -130,6 +132,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_LUMIA_721 ||
                 msg->token.type == COIN_TYPE_BITLAYER_721 ||
                 msg->token.type == COIN_TYPE_BERA_721 ||
+                msg->token.type == COIN_TYPE_VICTION_725 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -178,6 +181,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_LUMIA_721 ||
                 msg->token.type == COIN_TYPE_BITLAYER_721 ||
                 msg->token.type == COIN_TYPE_BERA_721 ||
+                msg->token.type == COIN_TYPE_VICTION_725 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -360,6 +364,21 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         }
     }
 
+    //vic token name
+    memzero(mName, sizeof(mName));
+    if (coin_type == COIN_TYPE_VICTION) {
+        if (strcmp(name, "Viction(VRC20)")) {
+            snprintf(mName, sizeof(mName), "%s%s", name, "(VRC20)");
+            name = &mName[0];
+        }
+    } else if (coin_type == COIN_TYPE_VICTION_21) {
+        snprintf(mName, sizeof(mName), "%s%s", name, "(VRC21)");
+        name = &mName[0];
+    } else if (coin_type == COIN_TYPE_VICTION_25) {
+        snprintf(mName, sizeof(mName), "%s%s", name, "(VRC25)");
+        name = &mName[0];
+    }
+
 	db->coin_type = coin_type;
 	strlcpy(db->coin_name, name, sizeof(db->coin_name));
 	strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
@@ -402,7 +421,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
             view_add_txt(TXS_LABEL_NFT_ID_TITLE, "Chain:");
             if (coin_type == COIN_TYPE_CUSTOM_EVM) {
-			    view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+            } else if (coin_type == COIN_TYPE_VICTION || coin_type == COIN_TYPE_VICTION_21 || coin_type == COIN_TYPE_VICTION_25) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "VIC(Viction)");
+            } else if (coin_type == COIN_TYPE_ERC20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "Ethereum");
+            } else if (coin_type == COIN_TYPE_BEP20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "BNB(BEP20)");
             } else {
                 if (config) {
 			        view_add_txt(TXS_LABEL_NFT_ID_VALUE, config->name);
@@ -438,8 +463,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		    view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->token.symbol);
 			
 			view_add_txt(TXS_LABEL_NFT_ID_TITLE, "Chain:");
-			if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
-			    view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+            if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+            } else if (coin_type == COIN_TYPE_VICTION || coin_type == COIN_TYPE_VICTION_21 || coin_type == COIN_TYPE_VICTION_25) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "VIC(Viction)");
+            } else if (coin_type == COIN_TYPE_ERC20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "Ethereum");
+            } else if (coin_type == COIN_TYPE_BEP20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "BNB(BEP20)");
             } else {
                 if (config) {
 			        view_add_txt(TXS_LABEL_NFT_ID_VALUE, config->name);
@@ -542,11 +573,17 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
 			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
 		} else {
-			if (config) {
-				view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
-			} else {
-				view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
-			}
+            if (coin_type == COIN_TYPE_ERC20) {
+                view_add_txt(TXS_LABEL_APP_MSG_VALUE, "ETH(ERC20)");
+            } else if (coin_type == COIN_TYPE_BEP20) {
+                view_add_txt(TXS_LABEL_APP_MSG_VALUE, "BNB(BEP20)");
+            } else {
+                if (config) {
+                    view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
+                } else {
+                    view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
+                }
+            }
 		}
 		//data
 		if (msg->data.size && !detected_data) {
@@ -566,6 +603,12 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
         if (coin_type == COIN_TYPE_CUSTOM_EVM) {
             view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+        } else if (coin_type == COIN_TYPE_VICTION || coin_type == COIN_TYPE_VICTION_21 || coin_type == COIN_TYPE_VICTION_25) {
+            view_add_txt(TXS_LABEL_NFT_ID_VALUE, "VIC(Viction)");
+        } else if (coin_type == COIN_TYPE_ERC20) {
+            view_add_txt(TXS_LABEL_NFT_ID_VALUE, "Ethereum");
+        } else if (coin_type == COIN_TYPE_BEP20) {
+            view_add_txt(TXS_LABEL_NFT_ID_VALUE, "BNB(BEP20)");
         } else {
 			if (config) {
             	view_add_txt(TXS_LABEL_NFT_ID_VALUE, config->name);
@@ -627,11 +670,17 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		format_coin_real_value(tmpbuf, sizeof(tmpbuf), msg->gas_limit * msg->gas_price, 18);
 		db_msg("feed value:%s", tmpbuf);
 		view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, tmpbuf);
-		if (config) {
-			view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
-		} else {
-			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
-		}
+        if (coin_type == COIN_TYPE_ERC20) {
+            view_add_txt(TXS_LABEL_APP_MSG_VALUE, "ETH(ERC20)");
+        } else if (coin_type == COIN_TYPE_BEP20) {
+            view_add_txt(TXS_LABEL_APP_MSG_VALUE, "BNB(BEP20)");
+        } else {
+            if (config) {
+                view_add_txt(TXS_LABEL_APP_MSG_VALUE, config->symbol);
+            } else {
+                view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
+            }
+        }
     } else if (msg->sign_type == 2) { //app message
         view->coin_symbol = symbol;
         view->flag |= 0x1;
