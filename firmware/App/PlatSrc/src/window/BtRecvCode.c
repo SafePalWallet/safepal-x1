@@ -53,10 +53,15 @@ int onBtParseQr(int type, qr_packet *packet) {
         //xchangeWindow(WINDOWID_QRPROC);
         return packet->type ? QR_DECODE_UNSUPPORT_MSG : QR_DECODE_INVALID_MSG;
     }
+    //hw need upgrade
+    if (msg->min_hw_version > DEVICE_APP_INT_VERSION) {
+        db_error("expect min_hw_version:%d, current version:%d", msg->min_hw_version, DEVICE_APP_INT_VERSION);
+        proto_client_message_delete(msg);
+        return QR_DECODE_UNSUPPORT_MSG;
+    }
     //invalid account
     if (msg->account_id && gSeedAccountId && msg->account_id != ((uint32_t) gSeedAccountId)) {
-        db_error("invalid account msg type:%d account:%x seed account:%llx ", msg->type, msg->account_id,
-                 gSeedAccountId);
+        db_error("invalid account msg type:%d account:%x seed account:%llx ", msg->type, msg->account_id, gSeedAccountId);
         //sendMessage(WINDOWID_QRPROC, MSG_QR_ERROR, QR_DECODE_ACCOUNT_MISMATCH, msg->type);
         proto_client_message_delete(msg);
         //xchangeWindow(WINDOWID_QRPROC);

@@ -367,7 +367,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     //vic token name
     memzero(mName, sizeof(mName));
     if (coin_type == COIN_TYPE_VICTION) {
-        if (strcmp(name, "Viction(VRC20)")) {
+        if (strcmp(name, "VIC(Viction)")) {
             snprintf(mName, sizeof(mName), "%s%s", name, "(VRC20)");
             name = &mName[0];
         }

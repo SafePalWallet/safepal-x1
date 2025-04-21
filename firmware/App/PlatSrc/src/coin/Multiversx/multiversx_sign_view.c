@@ -148,7 +148,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		}
 
 		view_add_txt(0, "Data:");
-		view_add_txt(0, msg->action.msg.displayStr);
+		// view_add_txt(0, msg->action.msg.displayStr);
+		const char *message = msg->action.msg.serialize;
+		omit_string(tmpbuf, message, 50, 50);
+		view_add_txt(0, tmpbuf);
 	}  else {
 
 	}

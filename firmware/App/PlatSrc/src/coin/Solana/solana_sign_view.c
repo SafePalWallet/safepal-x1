@@ -296,7 +296,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
 
         view_add_txt(TXS_LABEL_APP_MSG_VALUE, name);
-        view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
+        // view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
+		format_data_to_hex(msg->action.swap.message_data.bytes, msg->action.swap.message_data.size, str, sizeof(str));
+		view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
     } else {
 
     }
