@@ -260,13 +260,15 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
             }
 		}
 	}
+
+	bool is7702 = msg->transaction_type == ETH_TYPE_7702_UPDATE_TX || msg->transaction_type == ETH_TYPE_7702_TX;
 	if (config) {
 		name = config->name;
 		symbol = config->symbol;
 		coin_decimals = config->decimals;
 		coin_type = config->type;
 		coin_uname = config->uname;
-	} else if (trans_token && msg->token.type) {
+	} else if ((trans_token && msg->token.type) || is7702) {
 		if (msg->coin.type && msg->token.type != msg->coin.type) {
 			db_error("invalid coin.type:%d token.type:%d", msg->coin.type, msg->token.type);
 			return -1;
@@ -435,6 +437,36 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			        view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
                 }
             }
+		} else if (is7702) {
+			view->coin_symbol = "EIP-7702";
+			ret = 0;
+			view_add_txt(TXS_LABEL_TOTAL_VALUE, "Send");
+
+			if (msg->callInfo.call_n >= 1) {
+			    Call calls = msg->callInfo.calls[0];
+				ret = bignum2double(calls.data.bytes + 36, 32, msg->token.decimals, &send_value, tmpbuf, sizeof(tmpbuf));
+				snprintf(tmpbuf, sizeof(tmpbuf), "%.6lf", send_value);
+				view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
+			}
+
+			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->token.symbol);
+
+			view_add_txt(TXS_LABEL_NFT_ID_TITLE, "Chain:");
+            if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+            } else if (coin_type == COIN_TYPE_VICTION || coin_type == COIN_TYPE_VICTION_21 || coin_type == COIN_TYPE_VICTION_25) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "VIC(Viction)");
+            } else if (coin_type == COIN_TYPE_ERC20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "Ethereum");
+            } else if (coin_type == COIN_TYPE_BEP20) {
+                view_add_txt(TXS_LABEL_NFT_ID_VALUE, "BNB(BEP20)");
+            } else {
+                if (config) {
+			        view_add_txt(TXS_LABEL_NFT_ID_VALUE, config->name);
+                } else {
+			        view_add_txt(TXS_LABEL_NFT_ID_VALUE, msg->chain_info.name);
+                }
+            }
 		} else {
 			view->coin_symbol = res_getLabel(LANG_LABEL_SEND);
 			ret = 0;
@@ -519,31 +551,56 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		//to
 		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
 		memset(tmpbuf, 0, sizeof(tmpbuf));
-        int pos = 0;
-        if (coin_type == COIN_TYPE_XDC) {
-            tmpbuf[0] = 'x';
-            tmpbuf[1] = 'd';
-            tmpbuf[2] = 'c';
-            pos = 3;
-        } else {
-            tmpbuf[0] = '0';
-            tmpbuf[1] = 'x';
-            pos = 2;
-        }
-        if (is_transfer) {
-            ethereum_address_checksum(msg->data.bytes + 16, tmpbuf + pos, false, 0);
-        } else if (is_1155_transfer || is_transfer_from) {
-            ethereum_address_checksum(msg->data.bytes + 48, tmpbuf + pos, false, 0);
-        } else if (msg->to.size > 0) {
-            ethereum_address_checksum(msg->to.bytes, tmpbuf + pos, false, 0);
-        } else {
-            tmpbuf[0] = 0;
-        }
-		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+		if (is7702) {
+			int pos = 2;
+			tmpbuf[0] = '0';
+			tmpbuf[1] = 'x';
+			Call calls = msg->callInfo.calls[0];
+			ethereum_address_checksum(calls.data.bytes + 16, tmpbuf + pos, false, 0);
+			view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+		} else {
+			int pos = 0;
+			if (coin_type == COIN_TYPE_XDC) {
+				tmpbuf[0] = 'x';
+				tmpbuf[1] = 'd';
+				tmpbuf[2] = 'c';
+				pos = 3;
+			} else {
+				tmpbuf[0] = '0';
+				tmpbuf[1] = 'x';
+				pos = 2;
+			}
+			if (is_transfer) {
+				ethereum_address_checksum(msg->data.bytes + 16, tmpbuf + pos, false, 0);
+			} else if (is_1155_transfer || is_transfer_from) {
+				ethereum_address_checksum(msg->data.bytes + 48, tmpbuf + pos, false, 0);
+			} else if (msg->to.size > 0) {
+				ethereum_address_checksum(msg->to.bytes, tmpbuf + pos, false, 0);
+			} else {
+				tmpbuf[0] = 0;
+			}
+			view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+		}
 
 		//fee
 		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
-		if(msg->transaction_type == ETH_TRANSACTION_TYPE_1559){
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		if (is7702) {
+			if (msg->callInfo.type == 1) {
+				//gasStation
+				view_add_txt(TXS_LABEL_FEED_VALUE, msg->callInfo.gasStation);		
+				view_add_txt(TXS_LABEL_GAS_LIMIT, "Gas Balance");
+			} else {
+				//token
+				if (msg->callInfo.call_n >= 2) {
+					Call call = msg->callInfo.calls[1];
+					EthTokenInfo feeToken = msg->callInfo.feeToken;
+					ret = bignum2double(call.data.bytes + 36, 32, feeToken.decimals, &send_value, tmpbuf, sizeof(tmpbuf));
+					snprintf(tmpbuf, sizeof(tmpbuf), "%.6lf", send_value);
+					view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);				
+				}
+			}
+		} else if(msg->transaction_type == ETH_TRANSACTION_TYPE_1559){
 			format_coin_real_value(tmpbuf, sizeof(tmpbuf), msg->eip1559GasFee.max_fee_per_gas*msg->gas_limit, 18);
 			view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		}else{
@@ -570,7 +627,12 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
 		}
 
-		if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
+		if (is7702) {
+			if (msg->callInfo.call_n >= 2) {
+				EthTokenInfo feeToken = msg->callInfo.feeToken;
+				view_add_txt(TXS_LABEL_TOTAL_VALUE, feeToken.symbol);			
+			}
+		} else if (msg->coin.type == COIN_TYPE_CUSTOM_EVM) {
 			view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->chain_info.native_symbol);
 		} else {
             if (coin_type == COIN_TYPE_ERC20) {
@@ -691,7 +753,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     }
 
 	//save coin info
-    if ((trans_token || (msg->token.extra_type == TOKEN_EXTRA_TYPE_COIN)) && coin_type && view->msg_from == MSG_FROM_QR_APP && (coin_type != COIN_TYPE_CUSTOM_EVM)) {
+    if ((trans_token || msg->token.extra_type == TOKEN_EXTRA_TYPE_COIN || is7702) && coin_type && view->msg_from == MSG_FROM_QR_APP && (coin_type != COIN_TYPE_CUSTOM_EVM)) {
 		if (!storage_isCoinExist(coin_type, coin_uname)) {
 			// if (config) {
 			// 	storage_save_coin_info(config);

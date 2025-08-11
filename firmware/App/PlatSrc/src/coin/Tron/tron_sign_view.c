@@ -512,6 +512,30 @@ static int on_sign_show_withdrw_balance_contract(int contract_type, coin_state *
     return 0;
 }
 
+static int on_sign_show_account_permission_update_contract(int contract_type, coin_state *s, DynamicViewCtx *view) {
+    char tmpbuf[64], balance[32];
+    DBTxCoinInfo *db = &view->db;
+    SignRequest *msg = &s->req;
+
+    const CoinConfig *config = getCoinConfig(COIN_TYPE_TRX, "TRX");
+    db->coin_type = COIN_TYPE_TRX;
+    const char *symbol = "Permission";
+    strlcpy(db->coin_name, config->name, sizeof(db->coin_name));
+    strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
+    strlcpy(db->coin_uname, config->uname, sizeof(db->coin_uname));
+
+    view->total_height = SCREEN_HEIGHT;
+    view->coin_type = COIN_TYPE_TRX;
+    view->coin_uname = config->uname;
+    view->coin_name = config->name;
+    view->coin_symbol = symbol;
+    db->tx_type = TX_TYPE_SIGN_MSG;
+
+    view_add_txt(TXS_LABEL_FIELD_TITLE, "Chain:");
+    view_add_txt(TXS_LABEL_FIELD_VALUE, config->name);
+    return 0;
+}
+
 static int on_sign_show(void *session, DynamicViewCtx *view) {
     coin_state *s = (coin_state *) session;
     if (!s) {
@@ -548,6 +572,8 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
             return on_sign_show_cancel_all_un_freeze_v2_contract(msg->transaction.contract_type, s, view);
         case CONTRACT_TYPE_WITHDRAW_BALANCE_CONTRACT:
             return on_sign_show_withdrw_balance_contract(msg->transaction.contract_type, s, view);
+        case CONTRACT_TYPE_ACCOUNT_PERMISSION_UPDATE:
+            return on_sign_show_account_permission_update_contract(msg->transaction.contract_type, s, view);
         default:
             return -190;
     }
