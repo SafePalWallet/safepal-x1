@@ -96,6 +96,12 @@ static int on_sign_show_transfer_x_contract(int contract_type, coin_state *s, Dy
 	view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
 	view_add_txt(TXS_LABEL_TOTAL_VALUE, symbol);
 
+    if (coin_type == COIN_TYPE_TRC20 && is_not_empty_string(msg->transaction.gas_station)) {
+        view_add_txt(TXS_LABEL_MAXID, "Fee:");
+        view_add_txt(TXS_LABEL_MAXID, msg->transaction.gas_station);
+        view_add_txt(TXS_LABEL_MAXID, "Gas Balance");
+    }
+
 	view_add_txt(TXS_LABEL_MAXID, "Chain:");
 	view_add_txt(TXS_LABEL_MAXID, "Tron");
 	// strlcpy(db->send_value, tmpbuf, sizeof(db->send_value));

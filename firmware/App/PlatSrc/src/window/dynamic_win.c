@@ -13,10 +13,11 @@
 static unsigned char *gDispStr = NULL;
 
 #ifdef BUILD_FOR_DEV
-#define DISP_STR_SIZE (200*24)//30 lines
+#define DISP_STR_SIZE (200*24)
 #else
-#define DISP_STR_SIZE (30*24)//30 lines
+#define DISP_STR_SIZE (TEXT_MAX_LINE * 18)
 #endif
+#define ELLIPSIS "..."
 
 int dwin_init(void) {
     db_msg("init view");
@@ -36,10 +37,10 @@ int dwin_init(void) {
 
 int dwin_destory(void) {
     db_msg("destory view");
-
-    free(gDispStr);
-    gDispStr = NULL;
-
+    if (gDispStr != NULL) {
+        free(gDispStr);
+        gDispStr = NULL;
+    }
     return 0;
 }
 
@@ -49,21 +50,41 @@ int dwin_add_txt(DynamicViewCtx *view, int mkey, int id, const char *value) {
 
 static int SetWindowText(HWND hWnd, const char *spString) {
     if (is_empty_string(spString)) {
+        db_error("invalid spString");
         return -1;
     }
 
     if (!gDispStr) {
+        db_error("invalid gDispStr");
         return -2;
     }
+    size_t current_len = strlen(gDispStr);
+    size_t add_len = strlen(spString);
+    size_t newline_len = 1;
+    size_t ellipsis_len = strlen(ELLIPSIS);
+    size_t max_available = DISP_STR_SIZE - current_len - 1;
 
-    if ((strlen(gDispStr) + strlen(spString) + strlen("\n")) < (DISP_STR_SIZE - 1)) {
-        strncat(gDispStr, spString, strlen(spString));
-        strncat(gDispStr, "\n", strlen("\n"));
-        /*if (strlen(spString) % 19 != 0) {
-            strncat(gDispStr, "\n", strlen("\n"));
-        }*/
+    size_t required_len = current_len + add_len + newline_len;
+    db_msg("add_len:%d, required_len:%d, max:%d", add_len, required_len, DISP_STR_SIZE);
+    if (required_len < DISP_STR_SIZE) {
+        strncat(gDispStr, spString, add_len);
+        strncat(gDispStr, "\n", newline_len);
+        return 0;
+    }
+
+    size_t available = DISP_STR_SIZE - current_len - 1;
+    db_msg("available:%d, ellipsis_len:%d", available, ellipsis_len);
+    if (available >= ellipsis_len) {
+        size_t copy_len = available - ellipsis_len;
+        if (copy_len > 0) {
+            strncat(gDispStr, spString, copy_len);
+        }
+        strncat(gDispStr, ELLIPSIS, ellipsis_len);
     } else {
-        return -1;
+        size_t overwrite_count = ellipsis_len - max_available;
+        size_t new_end = current_len - overwrite_count;
+        gDispStr[new_end] = '\0';
+        strncat(gDispStr, ELLIPSIS, ellipsis_len);
     }
 
     return 0;
@@ -108,3 +129,4 @@ int ShowWindowTxt(const char *pTitle, uint32_t tType, const char *pCancel,const 
 
     return 0;
 }
+

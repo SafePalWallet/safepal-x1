@@ -15,6 +15,7 @@ extern ProtoClientMessage *mMessage;
 static TxPorcessData mTxp[1];
 static int mShowRet = 0;
 static DynamicViewCtx mDView[1];
+static char *mRawDataStr;
 
 int doSignReq(void) {
     db_msg("doSignReq");
@@ -189,7 +190,22 @@ int TxShowWin(void) {
     dwin_add_txt(mDView, 0, 0, msg);
 
     mShowRet = mTxp->onShow(mTxp->session, mDView);
+
+    //RawData
+    int head_len = GetExtHeaderLen(mMessage);
+    int raw_len = mMessage->data->len - head_len;
+    if (mMessage->p_total > 1) {
+        raw_len -= QR_HASH_CHECK_LEN;
+    }
+    int m_len = raw_len * 2 + 8;
+    db_msg("mMessage->data->len:%d, head_len:%d, raw_len:%d", mMessage->data->len, head_len, raw_len);
+    mRawDataStr = (char *) malloc(sizeof(char) * m_len);
+    memzero(mRawDataStr, m_len);
+    format_data_to_hex((unsigned char *) (mMessage->data->str + head_len), raw_len, mRawDataStr, m_len);
+    dwin_add_txt(mDView, 0, 0, "Raw Data");
+    dwin_add_txt(mDView, 0, 0, mRawDataStr);
     ret = ShowWindowTxt(mDView[0].coin_symbol, TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));
+    free(mRawDataStr);
     dwin_destory();
     if (ret != 0) {
         db_error("TX ShowWindowTxt error ret:%d", ret);
