@@ -133,6 +133,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_BITLAYER_721 ||
                 msg->token.type == COIN_TYPE_BERA_721 ||
                 msg->token.type == COIN_TYPE_VICTION_725 ||
+                msg->token.type == COIN_TYPE_VALUECHAIN_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -182,6 +183,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_BITLAYER_721 ||
                 msg->token.type == COIN_TYPE_BERA_721 ||
                 msg->token.type == COIN_TYPE_VICTION_725 ||
+                msg->token.type == COIN_TYPE_VALUECHAIN_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
