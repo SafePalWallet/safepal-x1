@@ -134,6 +134,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_BERA_721 ||
                 msg->token.type == COIN_TYPE_VICTION_725 ||
                 msg->token.type == COIN_TYPE_VALUECHAIN_721 ||
+                msg->token.type == COIN_TYPE_PLASMA_721 ||
+                msg->token.type == COIN_TYPE_SIDRA_721 ||
+                msg->token.type == COIN_TYPE_XLAYER_721 ||
+                msg->token.type == COIN_TYPE_HYPER_EVM_721 ||
+                msg->token.type == COIN_TYPE_MONAD_721 ||
+                msg->token.type == COIN_TYPE_ZEROG_721 ||
+                msg->token.type == COIN_TYPE_MOONRIVER_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -184,6 +191,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                 msg->token.type == COIN_TYPE_BERA_721 ||
                 msg->token.type == COIN_TYPE_VICTION_725 ||
                 msg->token.type == COIN_TYPE_VALUECHAIN_721 ||
+                msg->token.type == COIN_TYPE_PLASMA_721 ||
+                msg->token.type == COIN_TYPE_SIDRA_721 ||
+                msg->token.type == COIN_TYPE_XLAYER_721 ||
+                msg->token.type == COIN_TYPE_HYPER_EVM_721 ||
+                msg->token.type == COIN_TYPE_MONAD_721 ||
+                msg->token.type == COIN_TYPE_ZEROG_721 ||
+                msg->token.type == COIN_TYPE_MOONRIVER_721 ||
                 msg->token.extra_type == TOKEN_EXTRA_TYPE_ERC721) {
                 trans_nft = 1;
             }
@@ -239,18 +253,20 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			db_error("invalid contract name");
 			return -115;
 		}
-		if (msg->contract.id.size != 20) {
-			db_error("invalid contract id");
-			return -116;
-		}
-		if (msg->to.size != 20) {
-			db_error("invalid to size:%d", msg->to.size);
-			return -117;
-		}
-		if (memcmp(msg->to.bytes, msg->contract.id.bytes, 20) != 0) {
-			db_error("missmatch contract id and to");
-			return -118;
-		}
+        if ((msg->contract.id.size != 0) || (msg->to.size != 0)) {
+            if (msg->contract.id.size != 20) {
+                db_error("invalid contract id");
+                return -116;
+            }
+            if (msg->to.size != 20) {
+                db_error("invalid to size:%d", msg->to.size);
+                return -117;
+            }
+            if (memcmp(msg->to.bytes, msg->contract.id.bytes, 20) != 0) {
+                db_error("missmatch contract id and to");
+                return -118;
+            }
+        }
 	}
 
 	if (msg->coin.type && is_not_empty_string(msg->coin.uname)) {
@@ -595,7 +611,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			} else {
 				//token
 				if (msg->callInfo.call_n >= 2) {
-					Call call = msg->callInfo.calls[1];
+					Call call = msg->callInfo.calls[msg->callInfo.call_n - 1];
 					EthTokenInfo feeToken = msg->callInfo.feeToken;
 					ret = bignum2double(call.data.bytes + 36, 32, feeToken.decimals, &send_value, tmpbuf, sizeof(tmpbuf));
 					snprintf(tmpbuf, sizeof(tmpbuf), "%.6lf", send_value);
