@@ -5,7 +5,7 @@ Following a deep dive into the available SafePal X1 firmware source code and a c
 ## Technical Findings
 
 1. Opaque Firmware Structure & Header Obfuscation
-While the header identifier SEFW is visible in the binary (SHA256:32a8032f2cf91d2a8a7ae013ec6d1813b8d05b05e2a0b59ac681e428186f78f), the structure does not fully align with the provided FILE_INFO_ST definition in update.h.
+While the header identifier SEFW is visible in the binary (SHA256:32a8032f2cf91d2a8a7ae013ec6d1813b8d05b05e2a0b59ac681e428186f78f0), the structure does not fully align with the provided FILE_INFO_ST definition in update.h.
 
 CRC Mismatch: Standard CRC32 checks against the header fail, suggesting either a modified structure in production or an additional layer of obfuscation.
 
