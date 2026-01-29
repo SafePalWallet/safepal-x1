@@ -375,7 +375,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     db_msg("is_approval:%d, trans_token:%d, trans_nft:%d", is_approval, trans_token, trans_nft);
     db_msg("sign_type:%d, msg->nft_order_info.action:%d", msg->sign_type, msg->nft_order_info.action);
 
-	if (msg->sign_type == 1 || msg->sign_type == 2 || is_7702_approval == true) {
+	if (msg->sign_type == 1 || msg->sign_type == 2 || is_7702_approval == true || msg->transaction_type == ETH_TYPE_MAIN_U_APPROVE || msg->transaction_type == ETH_TYPE_7702_U_APPROVE) {
 		if (!strcmp(msg->contract.name, "Uniswap")) {
 			coin_uname = "Uniswap";
 		} else {
@@ -387,6 +387,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         } else if (msg->sign_type == 2) {
             name = "Data:";
             symbol = res_getLabel(LANG_LABEL_TX_SIGN);
+        } else if (msg->transaction_type == ETH_TYPE_MAIN_U_APPROVE || msg->transaction_type == ETH_TYPE_7702_U_APPROVE) {
+            name = "";
+            symbol = "Revoke Approval";
         }
 
         //NFT
@@ -427,7 +430,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 //	view->coin_symbol = symbol;
 	db_msg("name:%s symbol:%s coin_uname:%s msg->token.name:%s msg->token.symbol:%s", name, symbol, coin_uname, msg->token.name, msg->token.symbol);
 
-	if (msg->sign_type == 0 && is_7702_approval == false) { 
+	if (msg->sign_type == 0 && is_7702_approval == false && msg->transaction_type != ETH_TYPE_MAIN_U_APPROVE && msg->transaction_type != ETH_TYPE_7702_U_APPROVE) { 
 		double send_value = 0;
 		view->total_height = 2 * SCREEN_HEIGHT;
 		if (trans_nft) {
@@ -713,18 +716,18 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         }
 
 		Call call = msg->callInfo.calls[0];
-		snprintf(tmpbuf, sizeof(tmpbuf), "%s:", res_getLabel(LANG_LABEL_TX_LIMIT));
-		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, tmpbuf);
-		tmpbuf[0] = 0;
-		if (buffer_is_ff(call.data.bytes + 36, 32)) {
-			view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, res_getLabel(LANG_LABEL_TX_UNLIMITED));
-		} else if (msg->token.type && msg->token.decimals >= 0) {
-			double fee_value = 0;
-			ret = bignum2double(call.data.bytes + 36, 32, msg->token.decimals, &fee_value, tmpbuf, sizeof(tmpbuf));
-			if (ret == 0) {
-				view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, tmpbuf);
-			}
-		}
+		// snprintf(tmpbuf, sizeof(tmpbuf), "%s:", res_getLabel(LANG_LABEL_TX_LIMIT));
+		// view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, tmpbuf);
+		// tmpbuf[0] = 0;
+		// if (buffer_is_ff(call.data.bytes + 36, 32)) {
+		// 	view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, res_getLabel(LANG_LABEL_TX_UNLIMITED));
+		// } else if (msg->token.type && msg->token.decimals >= 0) {
+		// 	double fee_value = 0;
+		// 	ret = bignum2double(call.data.bytes + 36, 32, msg->token.decimals, &fee_value, tmpbuf, sizeof(tmpbuf));
+		// 	if (ret == 0) {
+		// 		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, tmpbuf);
+		// 	}
+		// }
 		if (is_not_empty_string(msg->token.symbol)) {
             snprintf(tmpbuf, sizeof(tmpbuf), "%s", msg->token.symbol);
         } else if (is_not_empty_string(msg->token.name)) {
@@ -758,7 +761,61 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			}
 		}
 
-    } else if (msg->sign_type == 1) { //approval
+    } else if (msg->transaction_type == ETH_TYPE_MAIN_U_APPROVE || msg->transaction_type == ETH_TYPE_7702_U_APPROVE) { 
+		tmpbuf[0] = 0;
+		view->coin_symbol = "Revoke Approval";
+		db->tx_type = TX_TYPE_APP_APPROVAL;
+		view_add_txt(TXS_LABEL_APPROVE_TOKEN_TITLE, "My Wallet");
+
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, COIN_TYPE_ETH, "ETH", 0, 0);
+		omit_string(tmpbuf, tmpbuf, 8, 8);
+		view_add_txt(TXS_LABEL_APPROVE_TOKEN_VALUE, tmpbuf);
+
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, "Interact with");
+		tmpbuf[0] = '0';
+		tmpbuf[1] = 'x';
+		Authorization item = msg->list[0];
+		omit_string(tmpbuf, item.oldAddress, 8, 8);
+		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, tmpbuf);
+
+		view->flag |= 0x1;
+        //fee
+		view_add_txt(TXS_LABEL_SIMPLE_FEE_TITLE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+        memset(tmpbuf, 0, sizeof(tmpbuf));
+		if (msg->transaction_type == ETH_TYPE_MAIN_U_APPROVE) {
+			uint64_t multiply = 0;
+			if (uint64_safe_multiply(msg->gas_limit, msg->gas_price, &multiply)) {
+				format_coin_real_value(tmpbuf, sizeof(tmpbuf), msg->gas_limit * msg->gas_price, 18);
+			} else {
+				db_msg("feed override");
+				int64_t base = (int64_t) pow(10, 3);
+				double feed = 0;
+				if (msg->gas_price > msg->gas_limit) {
+					double price = (double) msg->gas_price / base;
+					feed = msg->gas_limit * price;
+					db_msg("base:%lld, price:%f, feed:%f", base, price, feed);
+				} else {
+					double limit = (double) msg->gas_limit / base;
+					feed = msg->gas_price * limit;
+					db_msg("base:%lld, limit:%f, feed:%f", base, limit, feed);
+				}
+				format_coin_real_value(tmpbuf, sizeof(tmpbuf), feed, 15);
+			}
+			view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, tmpbuf);	
+		} else {
+			// snprintf(tmpbuf, sizeof(tmpbuf), "%s Gas Balance", msg->callInfo.gasStation);
+			if (msg->callInfo.gasStation == NULL) {
+				view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, "0 Gas Balance");
+			} else {
+				snprintf(tmpbuf, sizeof(tmpbuf), "%s Gas Balance", msg->callInfo.gasStation);
+				view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, tmpbuf);
+			}
+			// view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, msg->callInfo.gasStation);		
+		}
+		// view_add_txt(TXS_LABEL_SIMPLE_FEE_VALUE, tmpbuf);	
+	} else if (msg->sign_type == 1) { //approval
 		view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_APPROVE);;
 		db->tx_type = TX_TYPE_APP_APPROVAL;
 		
@@ -783,18 +840,18 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			}
         }
 
-		snprintf(tmpbuf, sizeof(tmpbuf), "%s:", res_getLabel(LANG_LABEL_TX_LIMIT));
-		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, tmpbuf);
-		tmpbuf[0] = 0;
-		if (buffer_is_ff(msg->data.bytes + 36, 32)) {
-			view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, res_getLabel(LANG_LABEL_TX_UNLIMITED));
-		} else if (msg->token.type && msg->token.decimals >= 0) {
-			double fee_value = 0;
-			ret = bignum2double(msg->data.bytes + 36, 32, msg->token.decimals, &fee_value, tmpbuf, sizeof(tmpbuf));
-			if (ret == 0) {
-				view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, tmpbuf);
-			}
-		}
+		// snprintf(tmpbuf, sizeof(tmpbuf), "%s:", res_getLabel(LANG_LABEL_TX_LIMIT));
+		// view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, tmpbuf);
+		// tmpbuf[0] = 0;
+		// if (buffer_is_ff(msg->data.bytes + 36, 32)) {
+		// 	view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, res_getLabel(LANG_LABEL_TX_UNLIMITED));
+		// } else if (msg->token.type && msg->token.decimals >= 0) {
+		// 	double fee_value = 0;
+		// 	ret = bignum2double(msg->data.bytes + 36, 32, msg->token.decimals, &fee_value, tmpbuf, sizeof(tmpbuf));
+		// 	if (ret == 0) {
+		// 		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_VALUE, tmpbuf);
+		// 	}
+		// }
 		if (is_not_empty_string(msg->token.symbol)) {
             snprintf(tmpbuf, sizeof(tmpbuf), "%s", msg->token.symbol);
         } else if (is_not_empty_string(msg->token.name)) {
