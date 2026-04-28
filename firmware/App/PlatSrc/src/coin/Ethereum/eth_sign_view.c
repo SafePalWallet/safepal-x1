@@ -215,7 +215,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		}
 
 		//0x095ea7b3 approve(address spender, uint256 amount)
-		if (msg->data.size == 68 && memcmp(msg->data.bytes, "\x09\x5e\xa7\xb3\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
+		if (msg->data.size >= 68 && memcmp(msg->data.bytes, "\x09\x5e\xa7\xb3\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", 16) == 0) {
 			is_approval = 1;
 			if (msg->sign_type != 1) {
 				db_error("invalid sign type:%d", msg->sign_type);

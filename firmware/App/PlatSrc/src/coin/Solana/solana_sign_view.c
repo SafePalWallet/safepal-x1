@@ -89,6 +89,9 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		
 		name = msg->action.compressedNFT.app_name;
 		symbol = msg->action.compressedNFT.app_name;
+    } else if ((char) msg->operation_type == OP_TYPE_GAS_RELAYER) {
+        name = is_not_empty_string(msg->token.name) ? msg->token.name : "";
+        symbol = is_not_empty_string(msg->token.symbol) ? msg->token.symbol : "";
     } else if ((char) msg->operation_type == OP_TYPE_DAPP ||
                (char) msg->operation_type == OP_TYPE_MSG ||
                (char) msg->operation_type == OP_TYPE_SWAP || 
@@ -304,6 +307,41 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         // view_add_txt(TXS_LABEL_APP_MSG_VALUE, msg->action.swap.content);
 		format_data_to_hex(msg->action.swap.message_data.bytes, msg->action.swap.message_data.size, str, sizeof(str));
 		view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
+    } else if ((char) msg->operation_type == OP_TYPE_GAS_RELAYER) {
+		view->coin_symbol = res_getLabel(LANG_LABEL_SEND);
+
+		view_add_txt(TXS_LABEL_TOTAL_VALUE, is_not_empty_string(msg->action.gas_relayer.amount) ? msg->action.gas_relayer.amount : "0");
+		strlcpy(db->send_value, is_not_empty_string(msg->action.gas_relayer.amount) ? msg->action.gas_relayer.amount : "0", sizeof(db->send_value));
+		view_add_txt(TXS_LABEL_TOTAL_MONEY, is_not_empty_string(msg->token.symbol) ? msg->token.symbol : "");
+
+		if (mainConfig) {
+			view_add_txt(TXS_LABEL_MAXID, "Chain:");
+			view_add_txt(TXS_LABEL_MAXID, mainConfig->name);
+		}
+
+		view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		const char *uname2 = coin_uname;
+		if (strcmp(msg->coin.path, sol_get_hd_path(COIN_TYPE_SOLANA, COIN_UNAME_SOL2)) == 0) {
+			uname2 = COIN_UNAME_SOL2;
+		}
+		wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, uname2, 0, 0);
+		omit_string(tmpbuf, tmpbuf, 26, 11);
+		view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
+
+		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		if (is_not_empty_string(msg->action.gas_relayer.to)) {
+			omit_string(tmpbuf, msg->action.gas_relayer.to, 26, 11);
+		}
+		view_add_txt(TXS_LABEL_PAYTO_ADDRESS, tmpbuf);
+
+		view_add_txt(TXS_LABEL_FEED_TILE, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
+		memset(tmpbuf, 0, sizeof(tmpbuf));
+		if (is_not_empty_string(msg->action.gas_relayer.fee)) {
+			snprintf(tmpbuf, sizeof(tmpbuf), "%s", msg->action.gas_relayer.fee);
+		}
+		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);
     } else if ((char) msg->operation_type == OP_TYPE_REG_NONCE) {
         view->coin_symbol = symbol;
         db->tx_type = TX_TYPE_APP_SIGN_MSG;

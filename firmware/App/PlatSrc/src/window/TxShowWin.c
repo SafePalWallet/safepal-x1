@@ -13,13 +13,11 @@
 
 extern ProtoClientMessage *mMessage;
 static TxPorcessData mTxp[1];
-static int mShowRet = 0;
 static DynamicViewCtx mDView[1];
 static char *mRawDataStr;
 
-int doSignReq(void) {
-    db_msg("doSignReq");
-    if (mShowRet != 0 || !mTxp->onSign) {
+static int doSignReq(void) {
+    if (!mTxp->onSign) {
         db_error("invalid state");
         return -1;
     }
@@ -163,19 +161,18 @@ int TxShowWin(void) {
         db_error("not show or init func");
         return -1;
     }
-    mShowRet = mTxp->onInit(mTxp->session);
-    if (mShowRet != 0) {
+    ret = mTxp->onInit(mTxp->session);
+    if (ret != 0) {
         db_error("TX init ret:%d", mShowRet);
-        dialog_error3(0, mShowRet, "Init tx failed.");
+        dialog_error3(0, ret, res_getLabel(LANG_LABEL_UNSUPPORT_MSG));
         return RETURN_DISP_MAINPANEL;
     }
 
     dwin_init();
-
     //add verify code
     int n = TxGetVerifyCode(mMessage);
     if (n < 0) {
-        db_error("TxGetVerifyCode error ret:%d", ret);
+        db_error("TxGetVerifyCode error ret:%d", n);
         dialog_error3(0, n, "Failed to generate verification code. Please try again.");
         dwin_destory();
         return ret;
@@ -189,7 +186,17 @@ int TxShowWin(void) {
     snprintf(msg, sizeof(msg), "%s:\n%s\n \n%s:", res_getLabel(LANG_LABEL_TX_VERIFY_CODE), code, res_getLabel(LANG_LABEL_TX_SHOW_DETAILS));
     dwin_add_txt(mDView, 0, 0, msg);
 
-    mShowRet = mTxp->onShow(mTxp->session, mDView);
+    ret = mTxp->onShow(mTxp->session, mDView);
+    db_msg("TX show ret:%d", ret);
+    if (ret < 0) {
+        if (ret == -181) {
+            dialog_error(0, res_getLabel(LANG_LABEL_WALLET_NO_SUPPORT_TOKEN));
+        } else {
+            dialog_error3(0, ret, res_getLabel(LANG_LABEL_UNSUPPORT_MSG));
+        }
+        dwin_destory();
+        return RETURN_DISP_MAINPANEL;
+    }
 
     //RawData
     int head_len = GetExtHeaderLen(mMessage);
@@ -210,15 +217,6 @@ int TxShowWin(void) {
     if (ret != 0) {
         db_error("TX ShowWindowTxt error ret:%d", ret);
         return ret;
-    }
-    db_msg("TX show ret:%d", mShowRet);
-    if (mShowRet < 0) {
-        if (mShowRet == -181) {
-            dialog_error(0, res_getLabel(LANG_LABEL_WALLET_NO_SUPPORT_TOKEN));
-        } else {
-            dialog_error3(0, mShowRet, "Show tx info failed.");
-        }
-        return RETURN_DISP_MAINPANEL;
     }
 
     ret = doSignReq();
