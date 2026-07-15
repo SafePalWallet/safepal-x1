@@ -65,16 +65,18 @@ static int show_balance_transfer(const CoinConfig *config, PolkadotSignTxReq *ms
 	}
 
 
-	HDNode hdnode;
-	memset(&hdnode, 0, sizeof(HDNode));
-	ret = wallet_get_hdnode(config->type, config->uname, &hdnode);
-	if (ret != 0) {
-		return -421;
-	}
-	db_secure("pubkey:%s", debug_ubin_to_hex(hdnode.public_key, 33));
-	if (memcmp(hdnode.public_key + 1, pubkey + 1, 32) != 0) {
-		db_error("miss match account");
-		return -208;
+	if(!is_sub_account_path(msg->coin.path)) {
+		HDNode hdnode;
+		memset(&hdnode, 0, sizeof(HDNode));
+		ret = wallet_get_hdnode(config->type, config->uname, &hdnode);
+		if (ret != 0) {
+			return -421;
+		}
+		db_secure("pubkey:%s", debug_ubin_to_hex(hdnode.public_key, 33));
+		if (memcmp(hdnode.public_key + 1, pubkey + 1, 32) != 0) {
+			db_error("miss match account");
+			return -208;
+		}
 	}
 
 	ret = bignum2double(transfer->amount.bytes, transfer->amount.size, config->decimals, &send_value, tmpbuf, sizeof(tmpbuf));

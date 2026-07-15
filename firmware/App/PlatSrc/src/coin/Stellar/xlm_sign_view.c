@@ -136,7 +136,18 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 	HDNode hdnode;
 	memset(&hdnode, 0, sizeof(HDNode));
-	ret = wallet_get_hdnode(COIN_TYPE_XLM, UNAME_XLM, &hdnode);
+	if (is_not_empty_string(msg->coin.path)) {
+		// Sub-wallet: coin.path carries the full derivation path
+		char coin_path[128] = {0};
+		if (get_coin_address_path(&msg->coin, coin_path, sizeof(coin_path), "") < 0) {
+			db_error("invalid coin path");
+			return -401;
+		}
+		ret = wallet_get_path_hdnode(CURVE_ED25519, coin_path, &hdnode);
+	} else {
+		// Main wallet: keep original behavior for backward compatibility
+		ret = wallet_get_hdnode(COIN_TYPE_XLM, UNAME_XLM, &hdnode);
+	}
 	if (ret != 0) {
 		return -401;
 	}

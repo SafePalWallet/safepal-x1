@@ -118,8 +118,12 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 			view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
 			memset(tmpbuf, 0, sizeof(tmpbuf));
-			wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
-			omit_string(tmpbuf, tmpbuf, 20, 20);
+			if (is_sub_account_path(msg->coin.path) && is_not_empty_string(msg->from_address)) {
+				omit_string(tmpbuf, msg->from_address, 20, 20);
+			} else {
+				wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
+				omit_string(tmpbuf, tmpbuf, 20, 20);
+			}
 			view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
 
 			if(hasArguments) {

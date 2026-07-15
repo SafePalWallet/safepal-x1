@@ -22,6 +22,10 @@ int bignum2double(const unsigned char *bytes, int size, uint8_t decimals, double
 
 int bignum_print(const unsigned char *bytes, int size, uint8_t decimals, const char *prefix, char *value_str, size_t value_str_size);
 
+int wallet_gen_address_by_path(char *address, int size, int coin_type, const char *coin_uname, const char *path, int testnet);
+
+int is_sub_account_path(const char *path);
+
 #ifdef __cplusplus
 }
 #endif

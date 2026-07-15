@@ -35,6 +35,7 @@
 #include "wallet_adapter.h"
 #include "libddi.h"
 #include "TxShowWin.h"
+#include "BatchSignWin.h"
 #include "cdr_widgets.h"
 #include "qr_pack.h"
 #include "ex_bt.h"
@@ -1257,6 +1258,10 @@ int mainPanel(void) {
                         status = STAT_TRANS_SIGN;
                         statusOld = STAT_TRANS_SIGN;
                         isBrushPanel = 0;
+                    } else if (ret == WINDOWID_BATCH_SIGN) {
+                        status = STAT_TRANS_BATCH_SIGN;
+                        statusOld = STAT_TRANS_BATCH_SIGN;
+                        isBrushPanel = 0;
                     } else if (ret == QR_GET_MULTI_PACKETS) {
                         init = 0;
                     }
@@ -1322,6 +1327,35 @@ int mainPanel(void) {
                                         res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
                     if (ret == EVENT_CANCEL) {
                         status = STAT_TRANS_SIGN;
+                        break;
+                    } else {
+                        respCommonNotify(DEVICE_USER_CANCEL);
+                        status = STAT_DATA_RECV;
+                    }
+                } else if (ret == RETURN_DISP_MAINPANEL) {
+                    status = STAT_DATA_RECV;
+                } else {
+                    status = STAT_ERR_RSP;
+                }
+                btProcDeInit();
+                BtRecvDeinit();
+                init = 1;
+                set_temp_screen_time(gSettings->mScreenSaver);
+                break;
+
+            case STAT_TRANS_BATCH_SIGN:
+                set_temp_screen_time(DEFAULT_MID_SCREEN_SAVER_TIME);
+                ret = BatchSignWin();
+                if (ret == 0) {
+                    gui_disp_info(res_getLabel(LANG_LABEL_TX_OK_TITLE), res_getLabel(LANG_LABEL_TX_OK_TIPS),
+                                  TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                    status = STAT_DATA_RECV;
+                } else if (ret == KEY_EVENT_ABORT) {
+                    ret = gui_disp_info(res_getLabel(LANG_LABEL_CANCEL), res_getLabel(LANG_LABEL_TX_CANCEL_TIPS),
+                                        TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, res_getLabel(LANG_LABEL_BACK),
+                                        res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
+                    if (ret == EVENT_CANCEL) {
+                        status = STAT_TRANS_BATCH_SIGN;
                         break;
                     } else {
                         respCommonNotify(DEVICE_USER_CANCEL);

@@ -28,6 +28,7 @@ enum bt_status {
     STAT_TRANS_PROC,
     STAT_DATA_SEND,
     STAT_TRANS_SIGN,
+    STAT_TRANS_BATCH_SIGN,
     STAT_ERR_RSP,
     STAT_BT_MAX,
 };

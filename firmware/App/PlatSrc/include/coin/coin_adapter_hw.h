@@ -24,6 +24,20 @@ void tx_set_db_view(const CoinConfig *config, DBTxCoinInfo *db, DynamicViewCtx *
 
 void tx_set_db_view_info(DBTxCoinInfo *db, DynamicViewCtx *view, int coin_type, const char *coin_uname, const char *coin_name, const char *coin_symbol);
 
+// Batch sign collector: when active, tx_common_show_sign_result() captures the
+// serialized sign result into this struct instead of displaying a QR window, so
+// BatchSignWin can pack all results into a single response QR.
+typedef struct {
+    int active;                 // 1 = batch mode, suppress per-tx QR display
+    unsigned char *data;        // malloc'd sign result (ext_header + sign protobuf)
+    int size;
+    uint16_t msg_type;          // response message type
+    uint16_t flag;              // QR flag
+    int client_id;
+} BatchSignCollector;
+
+extern BatchSignCollector gBatchSignCollector;
+
 #ifdef __cplusplus
 }
 #endif

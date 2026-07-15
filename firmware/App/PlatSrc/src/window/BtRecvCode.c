@@ -181,6 +181,9 @@ int onBtResult(const char *data, int size) {
             } else if (win == WINDOWID_TXSHOW) {
                 db_msg("onBtParseQr success to sig");
                 return WINDOWID_TXSHOW;
+            } else if (win == WINDOWID_BATCH_SIGN) {
+                db_msg("onBtParseQr success to batch sign");
+                return WINDOWID_BATCH_SIGN;
             } else if (win == QR_DECODE_ACCOUNT_MISMATCH || win == QR_DECODE_UNSUPPORT_MSG || win == QR_DECODE_INVALID_MSG) {
                 db_msg("invalid win:%d", win);
                 return win;

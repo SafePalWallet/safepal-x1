@@ -170,7 +170,8 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		tmpbuf[1] = 'x';
 		ethereum_address_checksum(clause->data.bytes + 16, tmpbuf + 2, false, 0);
 	} else {
-		ret = wallet_gen_address(tmpbuf, sizeof(tmpbuf), NULL, coin_type, coin_uname, 0, 0);
+		ret = wallet_gen_address_by_path(tmpbuf, sizeof(tmpbuf), coin_type, coin_uname, msg->coin.path, 0);
+		if (ret < 0) return ret;
 		db_msg("my address ret:%d addr:%s", ret, tmpbuf);
 	}
 	view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);

@@ -85,6 +85,9 @@ int get_mix_random_buffer(uint8_t *buf, size_t len) {
 
 int get_message_process_winid(const ProtoClientMessage *msg) {
     int winid;
+    if (msg->type == QR_MSG_BATCH_SIGN_REQUEST) {
+        return WINDOWID_BATCH_SIGN;
+    }
     if (msg->type > 0x5 && msg->type < QR_MSG_BLE_DEVICE_STATE_REQUEST) {
         if (msg->type % 2 == 0) {
             return WINDOWID_TXSHOW;
