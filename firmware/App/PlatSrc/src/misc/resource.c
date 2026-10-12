@@ -16,6 +16,8 @@ static char *mLangLabelBuffer = NULL;
 static int mLangLabelSize = 0;
 static int mLabelVersion = 0;
 
+#define LABEL_NAME "x1_label.bin"
+
 static const char *LANG_FILE_MAP[LANG_MAXID] = {
         "en",
         "zh-CN",
@@ -140,6 +142,58 @@ int res_get_label_version() {
     return mLabelVersion;
 }
 
+uint32_t get_file_offset_in_resource(const char *filename) {
+    StrMergeFileHead fileHead;
+    memset(&fileHead, 0x0, sizeof(StrMergeFileHead));
+    ddi_flash_read(INTERNAL_RESOURCE_ADDR, (uint8_t *) &fileHead, sizeof(StrMergeFileHead));
+    if (strncmp(fileHead.tag, RESOURCE_FILE_TAG, sizeof(fileHead.tag))) {
+        db_error("invalid tag:%s", debug_bin_to_hex(fileHead.tag, sizeof(fileHead.tag)));
+        return -1;
+    }
+
+    if ((fileHead.file_number <= 0) || (fileHead.file_number > 10)) {
+        db_error("invalid file_number:%d", fileHead.file_number);
+        return -2;
+    }
+
+    if (fileHead.version < 10000) {
+        db_error("invalid version:%d", fileHead.version);
+        return -3;
+    }
+    if ((fileHead.datasize < 1024) || (fileHead.datasize > INTERNAL_RESOURCE_SIZE)) {
+        db_error("invalid datasize:%d", fileHead.datasize);
+        return -4;
+    }
+    db_msg("file_number:%d", fileHead.file_number);
+    db_msg("datasize:%d", fileHead.datasize);
+
+    StrMergeFileInfo fileInfo;
+    int fileInfoLen = sizeof(StrMergeFileInfo) * fileHead.file_number;
+    ddi_flash_read(INTERNAL_RESOURCE_ADDR + sizeof(StrMergeFileHead), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
+    if (fileInfo.offset != (sizeof(StrMergeFileHead) + fileInfoLen)) {
+        db_error("invalid fileInfo.offset:%d", fileInfo.offset);
+        return -5;
+    }
+
+    for (int i = 0; i < fileHead.file_number; i++) {
+        memset(&fileInfo, 0x0, sizeof(StrMergeFileInfo));
+        ddi_flash_read(INTERNAL_RESOURCE_ADDR + sizeof(StrMergeFileHead) + (sizeof(StrMergeFileInfo) * i), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
+        db_msg("i:%d, filename:%s, len:%d, offset:%d, index:%d", i, fileInfo.file_name, fileInfo.len, fileInfo.offset, fileInfo.index);
+        if (fileInfo.len == 0) {
+            db_error("invalid len:%d", fileInfo.len);
+            return -6;
+        }
+
+        if (strncmp(fileInfo.file_name, filename, strlen(filename)) == 0) {
+            db_msg("find %s", filename);
+            return fileInfo.offset;
+        }
+    }
+
+    db_error("not find %s", filename);
+    return -7;
+}
+
 int res_loadLabelFromLangFile(const char *langFile) {
     int ret;
     StrMergeFileHead fileHead;
@@ -155,7 +209,9 @@ int res_loadLabelFromLangFile(const char *langFile) {
     memset(&fileHead, 0x0, sizeof(StrMergeFileHead));
     memset(&fileInfo, 0x0, sizeof(StrMergeFileInfo));
 
-    ddi_flash_read(INTERNAL_LANG_LABEL_ADDR, (uint8_t *) &fileHead, sizeof(StrMergeFileHead));
+    uint32_t labelOffset = get_file_offset_in_resource(LABEL_NAME);
+    uint32_t labelAddr = INTERNAL_RESOURCE_ADDR + labelOffset;
+    ddi_flash_read(labelAddr, (uint8_t *) &fileHead, sizeof(StrMergeFileHead));
     if (strncmp(fileHead.tag, "LABE", sizeof(fileHead.tag))) {
         db_error("tag is error!!!");
         return -1;
@@ -187,7 +243,7 @@ int res_loadLabelFromLangFile(const char *langFile) {
         return -4;
     }
 
-    pos = INTERNAL_LANG_LABEL_ADDR + sizeof(StrMergeFileHead) + sizeof(StrMergeFileInfo) * fileHead.file_number;
+    pos = labelAddr + sizeof(StrMergeFileHead) + sizeof(StrMergeFileInfo) * fileHead.file_number;
     sha256_Init(&context);
     while (data_size > 0) {
         readlen = data_size > READ_BLOCK_SIZE ? READ_BLOCK_SIZE : data_size;
@@ -211,7 +267,7 @@ int res_loadLabelFromLangFile(const char *langFile) {
 
     fileInfoLen = sizeof(StrMergeFileInfo) * fileHead.file_number;
 
-    ddi_flash_read(INTERNAL_LANG_LABEL_ADDR + sizeof(StrMergeFileHead), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
+    ddi_flash_read(labelAddr + sizeof(StrMergeFileHead), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
     if (fileInfo.offset != (sizeof(StrMergeFileHead) + fileInfoLen)) {
         db_error("fileInfo.offset is error!!!offset_b:%d", fileInfo.offset);
         return -3;
@@ -224,7 +280,7 @@ int res_loadLabelFromLangFile(const char *langFile) {
 
     for (i = 0; i < fileHead.file_number; i++) {
         memset(&fileInfo, 0x0, sizeof(StrMergeFileInfo));
-        ddi_flash_read(INTERNAL_LANG_LABEL_ADDR + sizeof(StrMergeFileHead) + (sizeof(StrMergeFileInfo) * i), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
+        ddi_flash_read(labelAddr + sizeof(StrMergeFileHead) + (sizeof(StrMergeFileInfo) * i), (uint8_t *) &fileInfo, sizeof(StrMergeFileInfo));
         db_msg("i:%d, name:%s, len:%d, offset:%d", i, fileInfo.file_name, fileInfo.len, fileInfo.offset);
 
         if ((fileInfo.len == 0) || (fileInfo.len > (20 * 1024))) {
@@ -234,7 +290,7 @@ int res_loadLabelFromLangFile(const char *langFile) {
 
         if (strcmp(fileInfo.file_name, langFile) == 0) {
             db_msg("find %s", langFile);
-            ret = res_loadLabelFileToBuffer(INTERNAL_LANG_LABEL_ADDR + fileInfo.offset, fileInfo.len);
+            ret = res_loadLabelFileToBuffer(labelAddr + fileInfo.offset, fileInfo.len);
             db_msg("load ret:%d", ret);
             return ret;
         }

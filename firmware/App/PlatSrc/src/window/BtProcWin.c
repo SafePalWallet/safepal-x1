@@ -399,12 +399,10 @@ int confirmBindAccount(void) {
         strcat(tmpbuf, salt);
         strcat(tmpbuf, client_unique_id);
         ret = strlen(tmpbuf);
-        db_debug("myrandkey init buffer:%d -> %s", ret, tmpbuf);
+        db_debug("myrandkey init buffer len:%d", ret);
         sha256_Raw((const uint8_t *) tmpbuf, (size_t) ret, myrandkey);
-        db_debug("myrandkey R1:%s", debug_ubin_to_hex(myrandkey, 32));
         do {
             sha256_Raw(myrandkey, sizeof(myrandkey), myrandkey);
-            db_debug("myrandkey:%s", debug_ubin_to_hex(myrandkey, 32));
             bn_read_be(myrandkey, &k);
         } while (bn_is_zero(&k) || !bn_is_less(&k, &curve->order));
 
@@ -415,9 +413,9 @@ int confirmBindAccount(void) {
         sha256_Update(&context, seckey, 32);
 
         if (client_id > 0 && memcmp(client.seckey, seckey, 32) == 0) {
-            db_msg("same seckey:%s old clientid:%d", debug_ubin_to_hex(seckey, 32), client_id);
+            db_msg("same seckey, old clientid:%d", client_id);
         } else {
-            db_msg("new seckey:%s new client time:%d time_zone:%d", debug_ubin_to_hex(seckey, 32), mMessage->time,
+            db_msg("new seckey, new client time:%d time_zone:%d", mMessage->time,
                    mMessage->time_zone);
             memcpy(client.seckey, seckey, 32);
             client.bind_time = mMessage->time + mMessage->time_zone;
@@ -486,7 +484,6 @@ int confirmBindAccount(void) {
 
         struct pbc_slice result;
         pbc_wmessage_buffer(wmsg, &result);
-        //MH abort
         //debug_show_long_bin_data("account qr:", (const unsigned char *) result.buffer, result.len);
         if (wmsg_wrapper != wmsg) {
             unsigned char *encode_buff = (unsigned char *) malloc(result.len);
@@ -706,7 +703,8 @@ int procDeviceState(void) {
 
     Global_Ble_Mtu = req.mtu;
     memzero(mClientName, sizeof(mClientName));
-    strncpy(mClientName, req.client_name, sizeof(mClientName));
+    strncpy(mClientName, req.client_name, sizeof(mClientName) - 1);
+    mClientName[sizeof(mClientName) - 1] = '\0';
 
     struct pbc_wmessage *wmsg = NULL;
     wmsg = proto_new_wmessage("Bluetooth.BleDeviceStateRespone");

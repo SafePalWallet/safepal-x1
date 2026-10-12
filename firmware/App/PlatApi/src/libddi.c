@@ -3,6 +3,12 @@
 #include "global.h"
 #include "debug.h"
 #include "libddi.h"
+#include "secure_api.h"
+
+#ifdef PRODUCT_TYPE_X1_R32
+#include "settings.h"
+#include "wallet_manager.h"
+#endif
 
 static ddi_sys_list_t gsys[1] = {0};
 static ddi_flash_list_t flash[1] = {0};
@@ -16,6 +22,10 @@ static ddi_vfs_list_t vfs[1] = {0};
 static ddi_mem_list_t mem[1] = {0};
 static ddi_ota_list_t ota[1] = {0};
 static ddi_soft_timer_list_t soft_timer[1] = {0};
+#ifdef PRODUCT_TYPE_X1_R32
+static ddi_spiflash_list_t spiflash[1] = {0};
+static ddi_se_list_t se[1] = {0};
+#endif
 
 static const ddi_cmd_item *ddi_cmd_items = NULL;
 static const ddi_cmd_item *last_cmd_item = NULL;
@@ -100,12 +110,9 @@ void init_ddi_item(const ddi_cmd_item *items) {
     fetch_ddi_p(sec, tamper_cfg);
     fetch_ddi_p(sec, tamper_get_stat);
     fetch_ddi_p(sec, tamper_clr);
-    fetch_ddi_p(sec, calc_sha1);
     fetch_ddi_p(sec, calc_sha256);
-    fetch_ddi_p(sec, calc_md5);
     fetch_ddi_p(sec, get_randnum);
     fetch_ddi_p(sec, get_cpuid);
-    fetch_ddi_p(sec, sec_rsa_sk_enc);
     fetch_ddi_p(sec, sec_reset_randkey);
     fetch_ddi_p(sec, sec_read_randkey);
     fetch_ddi_p(sec, sec_sapi_command);
@@ -161,6 +168,21 @@ void init_ddi_item(const ddi_cmd_item *items) {
     fetch_ddi_p(soft_timer, soft_timer_get_state);
     fetch_ddi_p(soft_timer, soft_timer_is_timeout);
     fetch_ddi_p(soft_timer, soft_timer_stop);
+#ifdef PRODUCT_TYPE_X1_R32
+    fetch_ddi_p(spiflash, spiflash_write);
+    fetch_ddi_p(spiflash, spiflash_read);
+    fetch_ddi_p(spiflash, spiflash_sector_erase);
+    fetch_ddi_p(spiflash, spiflash_block_erase);
+    fetch_ddi_p(spiflash, spiflash_ioctl);
+
+    fetch_ddi_p(se, se_init);
+    fetch_ddi_p(se, se_reset);
+    fetch_ddi_p(se, se_close);
+    fetch_ddi_p(se, se_write);
+    fetch_ddi_p(se, se_read);
+    fetch_ddi_p(se, se_entry_download);
+    fetch_ddi_p(se, se_ioctl);
+#endif
 }
 
 int ddi_sys_msleep(uint32_t nMs) {
@@ -180,6 +202,15 @@ int ddi_sys_get_tick(uint32_t *time_ms) {
 }
 
 int ddi_sys_get_firmware_ver(uint8_t nType) {
+#ifdef PRODUCT_TYPE_X1_R32
+    const sec_base_info *info = wallet_getBaseInfo();
+    return info->app_version;
+#else
+    return gsys->sys_get_firmware_ver(nType);
+#endif
+}
+
+int ddi_sys_get_firmware_ver_m(uint8_t nType) {
     return gsys->sys_get_firmware_ver(nType);
 }
 
@@ -388,17 +419,11 @@ int ddi_sec_tamper_clr(void) {
     return sec->tamper_clr();
 }
 
-int ddi_sec_calc_sha1(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue) {
-    return sec->calc_sha1(pData, dataLen, pHashValue);
-}
 
 int ddi_sec_calc_sha256(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue) {
     return sec->calc_sha256(pData, dataLen, pHashValue);
 }
 
-int ddi_sec_calc_md5(uint8_t *pData, uint32_t dataLen, uint8_t *pMd5Value) {
-    return sec->calc_md5(pData, dataLen, pMd5Value);
-}
 
 int ddi_sec_get_randnum(uint8_t *pData, uint32_t dataLen) {
     return sec->get_randnum(pData, dataLen);
@@ -408,9 +433,6 @@ int ddi_sec_get_cpuid(uint8_t *pData, int size) {
     return sec->get_cpuid(pData, size);
 }
 
-int ddi_sec_rsa_sk_enc(uint8_t *pskey, uint8_t *pdata, uint32_t datalen, uint8_t *poutdata, uint32_t *poutlen) {
-    return sec->sec_rsa_sk_enc(pskey, pdata, datalen, poutdata, poutlen);
-}
 
 int sec_reset_randkey(int op) {
     return sec->sec_reset_randkey(op);
@@ -631,3 +653,52 @@ void ddi_soft_timer_stop(uint16_t id) {
     soft_timer->soft_timer_stop(id);
 }
 
+#ifdef PRODUCT_TYPE_X1_R32
+int ddi_spiflash_write(uint32_t addr, const uint8_t *data, uint32_t size) {
+    return spiflash->spiflash_write(addr, data, size);
+}
+
+int ddi_spiflash_read(uint32_t addr, uint8_t *data, uint32_t size) {
+    return spiflash->spiflash_read(addr, data, size);
+}
+
+int ddi_spiflash_sector_erase(uint32_t addr) {
+    return spiflash->spiflash_sector_erase(addr);
+}
+
+int ddi_spiflash_block_erase(uint32_t addr) {
+    return spiflash->spiflash_block_erase(addr);
+}
+
+int ddi_spiflash_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {
+    return spiflash->spiflash_ioctl(nCmd, lParam, wParam);
+}
+
+int ddi_se_init() {
+    return se->se_init();
+}
+
+int ddi_se_reset() {
+    return se->se_reset();
+}
+
+int ddi_se_close() {
+    return se->se_close();
+}
+
+int ddi_se_write(const uint8_t *buf, int len) {
+    return se->se_write(buf, len);
+}
+
+int ddi_se_read(uint8_t *buf, int len) {
+    return se->se_read(buf, len);
+}
+
+int ddi_se_entry_download() {
+    return se->se_entry_download();
+}
+
+int ddi_se_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam) {
+    return se->se_ioctl(nCmd, lParam, wParam);
+}
+#endif

@@ -108,6 +108,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 	view_add_txt(0, "Chain:");
 	view_add_txt(0, coinConfig->name);
 
+    if (toAdress == NULL) {
+        db_error("no payto (non-change) output address");
+        return -105;
+    }
     view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
     view_add_txt(0, toAdress);
 

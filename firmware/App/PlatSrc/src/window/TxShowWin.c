@@ -1,5 +1,6 @@
 #define LOG_TAG "TxShow"
 
+#include <limits.h>
 #include "wallet_proto.h"
 #include "coin_adapter.h"
 #include "debug.h"
@@ -99,15 +100,46 @@ int TxShowWin(void) {
 
     //RawData
     int head_len = GetExtHeaderLen(mMessage);
-    int raw_len = mMessage->data->len - head_len;
+    if (head_len < 0) {
+        db_error("invalid ext header len:%d", head_len);
+        dialog_error3(0, head_len, "Show raw data failed.");
+        dwin_destory();
+        return RETURN_DISP_MAINPANEL;
+    }
+    size_t raw_len = mMessage->data->len;
+    if ((size_t) head_len >= raw_len) {
+        db_error("invalid raw data len:%d head len:%d", mMessage->data->len, head_len);
+        dialog_error3(0, -22, "Show raw data failed.");
+        dwin_destory();
+        return RETURN_DISP_MAINPANEL;
+    }
+    raw_len -= (size_t) head_len;
     if (mMessage->p_total > 1) {
+        if (raw_len <= QR_HASH_CHECK_LEN) {
+            db_error("invalid multi-packet raw data len:%lu", (unsigned long) raw_len);
+            dialog_error3(0, -22, "Show raw data failed.");
+            dwin_destory();
+            return RETURN_DISP_MAINPANEL;
+        }
         raw_len -= QR_HASH_CHECK_LEN;
     }
-    int m_len = raw_len * 2 + 8;
-    db_msg("mMessage->data->len:%d, head_len:%d, raw_len:%d", mMessage->data->len, head_len, raw_len);
+    if (raw_len > (size_t) ((INT_MAX - 8) / 2)) {
+        db_error("raw data too large:%lu", (unsigned long) raw_len);
+        dialog_error3(0, -23, "Show raw data failed.");
+        dwin_destory();
+        return RETURN_DISP_MAINPANEL;
+    }
+    int m_len = (int) raw_len * 2 + 8;
+    db_msg("mMessage->data->len:%d, head_len:%d, raw_len:%lu", mMessage->data->len, head_len, (unsigned long) raw_len);
     mRawDataStr = (char *) malloc(sizeof(char) * m_len);
+    if (!mRawDataStr) {
+        db_error("malloc raw data string failed, len:%d", m_len);
+        dialog_error3(0, -24, "Show raw data failed.");
+        dwin_destory();
+        return RETURN_DISP_MAINPANEL;
+    }
     memzero(mRawDataStr, m_len);
-    format_data_to_hex((unsigned char *) (mMessage->data->str + head_len), raw_len, mRawDataStr, m_len);
+    format_data_to_hex((unsigned char *) (mMessage->data->str + head_len), (int) raw_len, mRawDataStr, m_len);
     dwin_add_txt(mDView, 0, 0, "Raw Data");
     dwin_add_txt(mDView, 0, 0, mRawDataStr);
     ret = ShowWindowTxt(mDView[0].coin_symbol, TEXT_ALIGN_LEFT, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK));

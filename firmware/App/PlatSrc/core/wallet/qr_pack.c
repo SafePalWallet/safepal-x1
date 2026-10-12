@@ -96,6 +96,7 @@ int qr_packet_data_length(const qr_packet *p, int ext_header_len) {
         int len = p->data->len - ext_header_len;
         if (len > 0) {
             if (p->p_total > 1) {
+                if (len <= QR_HASH_CHECK_LEN) return 0;
                 return len - QR_HASH_CHECK_LEN;
             } else {
                 return len;
@@ -187,6 +188,10 @@ int parse_qr_packet_header_info(const char *data, size_t size, qr_packet_header_
     if (header_len != QR_PACKET_HEADER_LEN && header_len != (QR_PACKET_HEADER_LEN + QR_PACKET_CHUNK_HEADER_LEN)) {
         db_error("invalid header len:%d", header_len);
         return -2;
+    }
+    if (packet_len <= header_len) {
+        db_error("invalid packet len:%d header len:%d", packet_len, header_len);
+        return -4;
     }
 
     if (df == 1 && mf != 0) {
@@ -416,9 +421,14 @@ int merge_qr_packet_buffer(qr_packet_buffer *buffer, qr_packet *mrg_pkt, const c
         for (i = 0; i < buffer->p_total; i++) {
             if (!cstr_append_cstr(result, buffer->chunks[i])) {
                 db_error("append buffer size:%d false", totalsize);
+                cstr_free(result);
                 return QR_DECODE_SYSTEM_ERR;
             }
         }
+    }
+    if (mrg_pkt->data) { //free stale result left over from a discarded/failed previous decode
+        cstr_free(mrg_pkt->data);
+        mrg_pkt->data = NULL;
     }
     mrg_pkt->data = result;
     return 0;
@@ -456,6 +466,7 @@ int decrypt_qr_packet(qr_packet *mrg_pkt, const unsigned char *sekey) {
     //db_msg("before decrypt:%s", debug_bin_to_hex(mrg_pkt->data->str, data_len));
     if (aes256_decrypt((const unsigned char *) mrg_pkt->data->str, tmpbuff, data_len, sekey) != 0) {
         db_error("decrypt false packet:%p, sekey:%p", mrg_pkt, sekey);
+        free(tmpbuff);
         return -1;
     }
     //db_msg("after decrypt:%s", debug_ubin_to_hex(tmpbuff, data_len));

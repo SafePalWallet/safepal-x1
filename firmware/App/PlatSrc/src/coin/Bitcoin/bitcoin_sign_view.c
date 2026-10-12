@@ -183,8 +183,8 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			const char *symbol = msg->brc20.symbol;
 
 			db->coin_type = msg->coin.type;
-			strlcpy(db->coin_name, name, sizeof(name));
-			strlcpy(db->coin_symbol, symbol, sizeof(symbol));
+			strlcpy(db->coin_name, name, sizeof(db->coin_name));
+			strlcpy(db->coin_symbol, symbol, sizeof(db->coin_symbol));
 			strlcpy(db->coin_uname, msg->coin.uname, sizeof(db->coin_uname));
 
 			view->coin_type = db->coin_type;

@@ -254,13 +254,13 @@ static int readEncryptNvmData(int addr, void *data, int size, int block) {
     memset(key, 0, sizeof(key));
     if (ret != 0) {
         db_serr("decrypt data false addr:%d ret:%d", addr, ret);
-        return -1;
+        return -2;
     }
     len -= 4;
     sha256_Raw(buff, len, key);
     if (memcmp(buff + len, key, 4) != 0) {
         db_serr("decrypt data verify false addr:%d", addr);
-        return -1;
+        return -3;
     }
     if (size > len) size = len;
     memcpy(data, buff, size);

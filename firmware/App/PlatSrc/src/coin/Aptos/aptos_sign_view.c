@@ -88,7 +88,11 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			const char *amount = (tempAmount[0] == '0' && tempAmount[1] == 'x') ? (tempAmount + 2) : tempAmount;
 			db_msg("amount:%s",amount);
 			char tmpAmount[128];
-			int len = hex_to_bin((char *)amount, strlen(amount), (unsigned char *)tmpAmount, strlen(amount)/2);
+			if (strlen(amount) > sizeof(tmpAmount) * 2) {
+				db_error("amount too long");
+				return -5;
+			}
+			int len = hex_to_bin((char *)amount, strlen(amount), (unsigned char *)tmpAmount, sizeof(tmpAmount));
 			if (len < 0) {
 				db_error("out error");
 				return -5;
@@ -104,6 +108,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 			db_msg("coin_decimals:%d", coin_decimals);
 			db_msg("send_value:%.8lf", send_value);
 
+			if (ret != 0) {
+				db_error("bignum2double failed");
+				return -1013;
+			} else if (send_value > 9007199254740991.0) {
+				db_error("amount too large to display");
+				return -1013;
+			}
 			memset(tmpbuf, 0, sizeof(tmpbuf));
 			snprintf(tmpbuf, sizeof(tmpbuf), "%.8lf", send_value);
 			view_add_txt(TXS_LABEL_TOTAL_VALUE, tmpbuf);
@@ -184,10 +195,13 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 		const char *message = msg->action.msg.message;
         int len = strlen(message);
-		char *str = (char *) malloc(sizeof(char) * len/2);
-		format_data_to_hex((const unsigned char *)message, len, str, len/2);
-		view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
-	    free(str);
+		size_t buflen = (size_t)len * 2 + 3;
+		char *str = (char *) malloc(buflen);
+		if (str != NULL) {
+			format_data_to_hex((const unsigned char *)message, len, str, buflen);
+			view_add_txt(TXS_LABEL_APP_MSG_VALUE, str);
+			free(str);
+		}
 	} else {
 
 	}

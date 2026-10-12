@@ -7,35 +7,37 @@
 
 int GetExtHeaderLen(const ProtoClientMessage *msg) {
     size_t len = 0;
-    if (msg && msg->data) {
-        if (msg->flag & QR_FLAG_HAS_TIME) {
-            len += 6;
-            if (msg->data->len < len) { //error
-                db_error("invalid data len:%d < time len:6", msg->data->len);
-                return -1;
-            }
+    if (!msg || !msg->data || !msg->data->str) {
+        db_error("invalid client message data");
+        return -1;
+    }
+    if (msg->flag & QR_FLAG_HAS_TIME) {
+        len += 6;
+        if (msg->data->len < len) { //error
+            db_error("invalid data len:%d < time len:6", msg->data->len);
+            return -1;
         }
-        if (msg->flag & QR_FLAG_EXT_HEADER) {
-            if (msg->data->len < (len + 11)) {
-                db_error("invalid data len:%d from len:%d", msg->data->len, len);
-                return -2;
-            }
-            if (msg->data->str[len] != 0x7a) { //tag string 15
-                return -3;
-            }
-            uint32_t low = 0;
-            uint32_t hi = 0;
-            len += 1;
-            len += pb_decode((uint8_t *) (msg->data->str + len), &low, &hi); //varlen
-            if (hi != 0 || low >= 0x4000) {
-                db_error("invalid ext header var len:%d %d", low, hi);
-                return -4;
-            }
-            len += low;
-            if (msg->data->len < len) {
-                db_error("invalid data len:%d < %d varlen:%d", msg->data->len, len, low);
-                return -5;
-            }
+    }
+    if (msg->flag & QR_FLAG_EXT_HEADER) {
+        if (msg->data->len < (len + 11)) {
+            db_error("invalid data len:%d from len:%d", msg->data->len, len);
+            return -2;
+        }
+        if (msg->data->str[len] != 0x7a) { //tag string 15
+            return -3;
+        }
+        uint32_t low = 0;
+        uint32_t hi = 0;
+        len += 1;
+        len += pb_decode((uint8_t *) (msg->data->str + len), &low, &hi); //varlen
+        if (hi != 0 || low >= 0x4000) {
+            db_error("invalid ext header var len:%d %d", low, hi);
+            return -4;
+        }
+        len += low;
+        if (msg->data->len < len) {
+            db_error("invalid data len:%d < %d varlen:%d", msg->data->len, len, low);
+            return -5;
         }
     }
     return (int) len;
@@ -48,6 +50,11 @@ int TxGetVerifyCode(const ProtoClientMessage *msg) {
     char unique_id[CLIENT_UNIQID_MAX_LEN + 1];
     char str[32];
     uint8_t digest[32];
+
+    if (!msg || !msg->data || !msg->data->str) {
+        db_error("invalid client message data");
+        return -14;
+    }
 
     sha256_Init(&context);
 
@@ -92,8 +99,17 @@ int TxGetVerifyCode(const ProtoClientMessage *msg) {
         db_error("get ext header false ext_header_len:%d", ext_header_len);
         return -13;
     }
-    int data_len = msg->data->len - ext_header_len;
+    size_t data_len = msg->data->len;
+    if ((size_t) ext_header_len >= data_len) {
+        db_error("invalid data len:%d ext header len:%d", msg->data->len, ext_header_len);
+        return -14;
+    }
+    data_len -= (size_t) ext_header_len;
     if (msg->p_total > 1) {
+        if (data_len <= QR_HASH_CHECK_LEN) {
+            db_error("invalid multi-packet data len:%lu", (unsigned long) data_len);
+            return -14;
+        }
         data_len -= QR_HASH_CHECK_LEN;
     }
     sha256_Update(&context, msg->data->str + ext_header_len, data_len);

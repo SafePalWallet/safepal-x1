@@ -236,12 +236,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		memset(tmpbuf, 0, sizeof(tmpbuf));
 		const char *mint = msg->operation_type == OP_TYPE_MNFT ? 
 		msg->action.mNFT.token_mint_address : msg->action.token_transfer.token_mint_address;
-		memcpy(tmpbuf, mint, 7);
-		tmpbuf[7] = '.';
-		tmpbuf[8] = '.';
-		tmpbuf[9] = '.';
-		int len = strlen(mint);
-		memcpy(tmpbuf + 10, mint + (len - 8), 8);
+		omit_string(tmpbuf, mint, 7, 8);
 		db_msg("tmpbuf:%s", tmpbuf);
 		view_add_txt(TXS_LABEL_TOTAL_MONEY, tmpbuf);
 
@@ -369,7 +364,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		ret = sol_getFeeAndAmount(msg, &fee, &amount, NULL);
 		if (ret != 0) {
 			db_error("sol_getFeeAndAmount failed");
-			return ret; 
+			return ret;
 		}
 		snprintf(tmpbuf, sizeof(tmpbuf), "%.9f SOL", fee);
 		view_add_txt(TXS_LABEL_FEED_VALUE, tmpbuf);

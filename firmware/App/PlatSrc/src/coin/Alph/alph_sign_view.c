@@ -130,7 +130,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
                             msg->action.sendCoins.fee.size, coin_decimals, &send_value, tmpbuf,
                             sizeof(tmpbuf));
         db_msg("fee send_value:%.8lf", send_value);
-        snprintf(tmpbuf, sizeof(tmpbuf), "%s ALPH", tmpbuf);
+        strlcat(tmpbuf, " ALPH", sizeof(tmpbuf));
         db_msg("feed value:%s", tmpbuf);
         view_add_txt(0, tmpbuf);
 

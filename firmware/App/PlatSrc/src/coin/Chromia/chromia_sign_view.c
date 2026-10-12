@@ -68,14 +68,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
         // view_add_txt(0, msg->action.sendCoins.from);
         memset(tmpbuf, 0x00, sizeof(tmpbuf));
-        memcpy(tmpbuf, msg->action.sendCoins.from, 64);
+        omit_string(tmpbuf, msg->action.sendCoins.from, 26, 11);
         toLowerCase(tmpbuf);
         view_add_txt(0, tmpbuf);
 
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
         // view_add_txt(0, msg->action.sendCoins.to);
         memset(tmpbuf, 0x00, sizeof(tmpbuf));
-        memcpy(tmpbuf, msg->action.sendCoins.to + 2, 64);
+        omit_string(tmpbuf, msg->action.sendCoins.to, 26, 11);
         toLowerCase(tmpbuf);
         view_add_txt(0, tmpbuf);
 

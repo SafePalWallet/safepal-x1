@@ -10,6 +10,7 @@
 
 static int on_sign_show(void *session, DynamicViewCtx *view) {
     char tmpbuf[128];
+    memset(tmpbuf, 0, sizeof(tmpbuf));
     int coin_type = 0;
     const char *coin_uname = NULL;
     const char *name = NULL;
@@ -62,6 +63,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         }
 
         ret = bignum2double((const unsigned char *) msg->action.sendCoins.value.bytes, msg->action.sendCoins.value.size, coin_decimals, &send_value, tmpbuf, sizeof(tmpbuf));
+        if (ret != 0) {
+            db_error("bignum2double value failed");
+            return -1111;
+        }
         strlcpy(db->send_value, tmpbuf, sizeof(db->send_value));
         view_add_txt(0, tmpbuf);
         view_add_txt(0, symbol);
@@ -74,6 +79,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
         memset(tmpbuf, 0x0, sizeof(tmpbuf));
         ret = bignum2double((const unsigned char *) msg->action.sendCoins.gasFeeCap.bytes, msg->action.sendCoins.gasFeeCap.size, coin_decimals, &send_value, tmpbuf, sizeof(tmpbuf));
+        if (ret != 0) {
+            db_error("bignum2double gasFeeCap failed");
+            return -1112;
+        }
         db_msg("send_value:%.10lf", send_value * msg->action.sendCoins.gasLimit);
         snprintf(tmpbuf, sizeof(tmpbuf), "%.12lf", send_value * msg->action.sendCoins.gasLimit);
         view_add_txt(0, tmpbuf);

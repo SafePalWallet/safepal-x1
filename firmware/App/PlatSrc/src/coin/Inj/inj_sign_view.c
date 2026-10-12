@@ -130,7 +130,12 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         strlcpy(db->currency_symbol, money_symbol, sizeof(db->currency_symbol));
         memset(tmpbuf, 0, sizeof(tmpbuf));
         memset(buf, 0, sizeof(buf));
-        len = hex_to_bin(msg->action.sendCoins.amount + 2, strlen(msg->action.sendCoins.amount) - 2,
+        const char *inj_amount = msg->action.sendCoins.amount;
+        if (strlen(inj_amount) < 2 || inj_amount[0] != '0' || inj_amount[1] != 'x') {
+            db_error("invalid amount:%s", inj_amount);
+            return -5;
+        }
+        len = hex_to_bin(inj_amount + 2, strlen(inj_amount) - 2,
                          (unsigned char *) buf, sizeof(buf));
 //        db_msg("buf:%s,len=%d", debug_bin_to_hex(buf, len), len);
         ret = bignum2double((const unsigned char *) buf, len, coin_decimals, &send_value, tmpbuf, sizeof(tmpbuf));

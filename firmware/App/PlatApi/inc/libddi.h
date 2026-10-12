@@ -147,17 +147,11 @@ int ddi_sec_tamper_get_stat(void);
 
 int ddi_sec_tamper_clr(void);
 
-int ddi_sec_calc_sha1(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue);
-
 int ddi_sec_calc_sha256(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue);
-
-int ddi_sec_calc_md5(uint8_t *pData, uint32_t dataLen, uint8_t *pMd5Value);
 
 int ddi_sec_get_randnum(uint8_t *pData, uint32_t dataLen);
 
 int ddi_sec_get_cpuid(uint8_t *pData, int size);
-
-int ddi_sec_rsa_sk_enc(uint8_t *pskey, uint8_t *pdata, uint32_t datalen, uint8_t *poutdata, uint32_t *poutlen);
 
 int sec_reset_randkey(int op);
 
@@ -206,5 +200,33 @@ int ddi_ota_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
 int ddi_ota_prepare(void);
 
 int ddi_ota_upgrade(void);
+
+int ddi_sys_get_firmware_ver_m(uint8_t nType);
+
+#ifdef PRODUCT_TYPE_X1_R32
+int ddi_spiflash_write(uint32_t addr, const uint8_t *data, uint32_t size);
+
+int ddi_spiflash_read(uint32_t addr, uint8_t *data, uint32_t size);
+
+int ddi_spiflash_sector_erase(uint32_t addr);
+
+int ddi_spiflash_block_erase(uint32_t addr);
+
+int ddi_spiflash_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
+
+int ddi_se_init();
+
+int ddi_se_reset();
+
+int ddi_se_close();
+
+int ddi_se_write(const uint8_t *buf, int len);
+
+int ddi_se_read(uint8_t *buf, int len);
+
+int ddi_se_entry_download();
+
+int ddi_se_ioctl(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
+#endif
 
 #endif

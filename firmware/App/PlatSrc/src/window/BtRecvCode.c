@@ -155,7 +155,7 @@ int onBtResult(const char *data, int size) {
             unsigned char aes256key[32];
 
             if (storage_getClientSeckey(qr->client_id, aes256key) > 0) {
-                db_debug("client:%d aes256key:%s", qr->client_id, debug_ubin_to_hex(aes256key, 32));
+                db_debug("client:%d aes256key loaded", qr->client_id);
                 if (decrypt_qr_packet(qr, aes256key) != 0) {
                     db_error("aes decrypt qr packet false");
                     errcode = QR_DECODE_PACKET_FAILED;
@@ -216,8 +216,12 @@ int setBtDecode(bool enable) {
 }
 
 void BtRecvInit(void) {
-    init_qr_packet(&mQrResult, 0);
+    // Free any stale mQrResult.data left over from the previous receive BEFORE
+    // init_qr_packet zeroes the struct. Reversing this order loses the old data
+    // pointer (init nulls it, then clearBtDecode(0) frees NULL) and leaks one
+    // QR/BLE payload buffer per completed receive -> heap-exhaustion DoS.
     clearBtDecode(0);
+    init_qr_packet(&mQrResult, 0);
     setBtDecode(true);
 }
 

@@ -108,7 +108,7 @@ int active_get_url(char *url_buffer, int len) {
     db_secure("info:%d -> %s", binlen, debug_ubin_to_hex(info, binlen));
     XDEFINE_BUFFER(activekey);
     // compute k*pub -> pub (final key)
-    db_secure("seckey:%s", debug_ubin_to_hex(activekey, 32));
+    db_secure("activekey loaded");
     ret = aes256_encrypt(info, info, binlen, activekey);
     memset(activekey, 0, 32);
     if (ret < 0) {

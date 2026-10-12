@@ -155,7 +155,7 @@ int config_file_read(const char *file, int (*callback)(void *user, const char *k
 	char *item_key, *item_value, *tmp;
 	int len;
     char *end, *head;
-    char oneLine[64];
+    char oneLine[192]; // must hold the longest legit line: key + '=' + value(<=120, see settings_save_string) + '\n'
     int itemLen = 0, sumLen=0, offset=0, find=0;
 	
 	int fp = ddi_vfs_open(file, "r");
@@ -173,19 +173,38 @@ int config_file_read(const char *file, int (*callback)(void *user, const char *k
 			break;
 		}
 		
+		sumLen = 0;
 		while(1){
 			memset(oneLine, 0x0, sizeof(oneLine));
 			end = strchr(tmpbuf+sumLen, '\n');
 			if (end == 0) {
-				offset+=sumLen;
+				if (sumLen == 0) {
+					// No newline anywhere in this chunk. If the read was short we
+					// hit EOF on a line lacking a trailing newline; otherwise the
+					// line is longer than tmpbuf. Either way advance past it so
+					// offset always moves forward (guards against an infinite loop).
+					if (len < (int) sizeof(tmpbuf)) {
+						find = 1;
+					} else {
+						db_msg("config line exceeds buffer, skip");
+						offset += (int) sizeof(tmpbuf);
+					}
+				} else {
+					offset += sumLen;
+				}
 				db_msg("tmpbuf to end");
 				break;
 			}
 			head = tmpbuf+sumLen;
 			itemLen = end-head+1;
-			strncpy(oneLine, head, itemLen);
-			db_msg("oneLine:%s",oneLine);
 			sumLen += itemLen;
+			if (itemLen >= (int) sizeof(oneLine)) {
+				db_msg("config line too long:%d skip", itemLen);
+				continue;
+			}
+			strncpy(oneLine, head, itemLen);
+			oneLine[itemLen] = 0;
+			db_msg("oneLine:%s",oneLine);
 			
 			item_key = oneLine;
 			item_value = strchr(oneLine, '=');

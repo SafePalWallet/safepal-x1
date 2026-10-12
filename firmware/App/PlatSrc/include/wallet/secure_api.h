@@ -10,6 +10,25 @@
 extern "C" {
 #endif
 
+#ifdef PRODUCT_TYPE_X1_R32
+typedef struct {
+    int (*init)();
+
+    int (*close)();
+
+    int (*write)(const unsigned char *buf, int len);
+
+    int (*pwrite)(const unsigned char *buf, int len);
+
+    int (*read)(unsigned char *buf, int len, int time, int mini_len);
+
+    int (*pread)(unsigned char *buf, int len, int time, int mini_len);
+
+    int (*get_chipid)(unsigned char *buff, int len);
+} SE_OP_FUNCS;
+
+#endif
+
 typedef struct {
     unsigned char chip_type;
     unsigned char chipid_len;
@@ -63,6 +82,8 @@ int sapi_get_state_info(sec_state_info *info);
 
 uint64_t sapi_get_account_id();
 
+int sapi_get_random(unsigned char *buff, int size);
+
 int sapi_encode_data(const unsigned char *passwd, int passlen, uint8_t encode_type, const unsigned char *data, int len, unsigned char *encode_data, int size);
 
 int sapi_get_xpub(uint16_t curv, const char *path, const unsigned char *passwd, int passlen, unsigned char *xpub, unsigned int size);
@@ -81,6 +102,12 @@ int sapi_destory_seed();
 int sapi_verify_mnemonic(const unsigned char *passwd, int passlen, const unsigned char *mnemonic, int len);
 
 int sapi_set_passphrase(const unsigned char *passwd, int passlen, const unsigned char *data, int len);
+
+#ifdef PRODUCT_TYPE_X1_R32
+
+int sapi_get_chipid(unsigned char *buff, int len);
+
+#endif
 
 #ifdef __cplusplus
 }

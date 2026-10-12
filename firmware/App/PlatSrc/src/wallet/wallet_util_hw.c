@@ -10,6 +10,7 @@
 #include "ex_types.h"
 #include "libddi.h"
 #include "wallet_util_hw.h"
+#include "secure_api.h"
 
 #define RANDOM_DIGEST_LENGTH 32
 
@@ -55,7 +56,7 @@ static int _mix_random_digest(uint8_t *randata, size_t len) {
     }
     sha3_Update(&context, (const unsigned char *) &Global_Key_Random_Source, sizeof(Global_Key_Random_Source));
 
-    if (ddi_sec_get_randnum(buff, 64) != 64) {
+    if (sapi_get_random(buff, 64) != 64) {
         db_serr("gen sapi random false");
         return -1;
     }
@@ -79,7 +80,7 @@ int get_mix_random_buffer(uint8_t *buf, size_t len) {
         p += RANDOM_DIGEST_LENGTH;
     }
     memzero(tmpbuf, sizeof(tmpbuf));
-    db_secure("mix random %d : %s", len, debug_ubin_to_hex(buf, len));
+    db_secure("mix random len:%lu", (unsigned long) len);
     return (int) len;
 }
 

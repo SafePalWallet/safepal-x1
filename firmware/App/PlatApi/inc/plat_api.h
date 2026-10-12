@@ -173,19 +173,11 @@ typedef struct {
 
     int (*tamper_clr)(void);
 
-    int (*calc_sha1)(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue);
-
     int (*calc_sha256)(uint8_t *pData, uint32_t dataLen, uint8_t *pHashValue);
-
-    int (*calc_md5)(uint8_t *pData, uint32_t dataLen, uint8_t *pMd5Value);
 
     int (*get_randnum)(uint8_t *pData, uint32_t dataLen);
 
     int (*get_cpuid)(uint8_t *buff, int size);
-
-    int (*sec_rsa_pk_dec)(uint8_t *ppkey, uint8_t *pdata, uint32_t datalen, uint8_t *poutdata, uint32_t *poutlen);
-
-    int (*sec_rsa_sk_enc)(uint8_t *pskey, uint8_t *pdata, uint32_t datalen, uint8_t *poutdata, uint32_t *poutlen);
 
     int (*sec_reset_randkey)(int op);
 
@@ -222,6 +214,36 @@ typedef struct {
 
     void (*soft_timer_stop)(uint16_t id);
 } ddi_soft_timer_list_t;
+
+#ifdef PRODUCT_TYPE_X1_R32
+typedef struct {
+    int (*spiflash_write)(uint32_t addr, const uint8_t *data, uint32_t size);
+
+    int (*spiflash_read)(uint32_t addr, uint8_t *data, uint32_t size);
+
+    int (*spiflash_sector_erase)(uint32_t addr);
+
+    int (*spiflash_block_erase)(uint32_t addr);
+
+    int (*spiflash_ioctl)(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
+} ddi_spiflash_list_t;
+
+typedef struct {
+    int (*se_init)(void);
+
+    int (*se_reset)(void);
+
+    int (*se_close)(void);
+
+    int (*se_write)(const uint8_t *buf, int len);
+
+    int (*se_read)(uint8_t *buf, int len);
+
+    int (*se_entry_download)(void);
+
+    int (*se_ioctl)(uint32_t nCmd, uint32_t lParam, uint32_t wParam);
+} ddi_se_list_t;
+#endif
 
 enum {
     ddi_id(sys_msleep) = 0x101,
@@ -295,14 +317,10 @@ enum {
     ddi_id(tamper_cfg) = 0xA01,
     ddi_id(tamper_get_stat),
     ddi_id(tamper_clr),
-    ddi_id(calc_sha1) = 0xB01,
-    ddi_id(calc_sha256),
-    ddi_id(calc_md5),
-    ddi_id(get_randnum),
+    ddi_id(calc_sha256) = 0xB02, 
+    ddi_id(get_randnum) = 0xB04, 
     ddi_id(get_cpuid),
-    ddi_id(sec_rsa_pk_dec),
-    ddi_id(sec_rsa_sk_enc),
-    ddi_id(sec_reset_randkey),
+    ddi_id(sec_reset_randkey) = 0xB08, 
     ddi_id(sec_read_randkey),
     ddi_id(sec_sapi_command),
     ddi_id(sec_read_vsn),
@@ -317,6 +335,20 @@ enum {
     ddi_id(soft_timer_get_state),
     ddi_id(soft_timer_is_timeout),
     ddi_id(soft_timer_stop),
+#ifdef PRODUCT_TYPE_X1_R32
+    ddi_id(spiflash_write) = 0xE01,
+    ddi_id(spiflash_read),
+    ddi_id(spiflash_sector_erase),
+    ddi_id(spiflash_block_erase),
+    ddi_id(spiflash_ioctl),
+    ddi_id(se_init) = 0xF01,
+    ddi_id(se_reset),
+    ddi_id(se_close),
+    ddi_id(se_write),
+    ddi_id(se_read),
+    ddi_id(se_entry_download),
+    ddi_id(se_ioctl),
+#endif
 };
 
 #endif

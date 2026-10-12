@@ -776,8 +776,7 @@ static int check_mnemonic_match(const unsigned char *passwd, const char *mnemoni
     hdnode_private_ckd_prime(node, 0);
     hdnode_private_ckd_prime(node, 0);
     hdnode_fill_public_key(node);
-    db_secure("chaincode1:%s %s", passphrase, debug_ubin_to_hex(node->chain_code, 32));
-    db_secure("public_key1:%s %s", passphrase, debug_ubin_to_hex(node->public_key, 33));
+    db_secure("derived node for mnemonic verification");
 
     PubHDNode node2;
     int ret = wallet_queryPubHDNode(CURVE_SECP256K1, "m/44h/0h/0h", passwd, &node2);
@@ -877,9 +876,9 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
     memzero(mnemonics, sz);
     do {
         memcpy(kb_result, srcMnemonics + index * MNEMONIC_MAX_LEN, MNEMONIC_MAX_LEN);
-        db_secure("mnemonics index:%d str:%s", index, srcMnemonics + index * MNEMONIC_MAX_LEN);
+        db_secure("mnemonics index:%d", index);
         snprintf(title, sizeof(title), res_getLabel(LANG_LABEL_ENTER_MNEMONIC), index + 1);
-        db_secure("keyboard init result:%s", kb_result);
+        db_secure("keyboard init has_value:%d", kb_result[0] != 0);
 
         ret = gui_show_edit_box(IME_ASSOC, IME_ABC_SMALL, TEXT_ALIGN_CENTER, title, NULL, kb_result, 3, 12, res_getLabel(LANG_LABEL_BACK), res_getLabel(LANG_LABEL_SUBMENU_OK), eventType);
         db_msg("ret:%d", ret);
@@ -899,7 +898,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
             break;
         } else if (ret == 0) {
             //input ok
-            db_secure("enter mnemonic:%s ret:%d", kb_result, ret);
+            db_secure("enter mnemonic ret:%d", ret);
         } else if (ret == EVENT_KEY_F1) {
             err = RETURN_DISP_MAINPANEL;
             break;
@@ -925,7 +924,7 @@ int enterRecoveryWord(char *mnemonics, int size, int mlen, const unsigned char *
                 }
             }
             *(mnemonics + offset) = '\0';
-            db_secure("mnemonics cat str:%s", mnemonics);
+            db_secure("mnemonics combined count:%d", mlen);
             if (i != mlen) { //count error?
                 db_serr("have empty word? mlen:%d i:%d", mlen, i);
                 err = 1;

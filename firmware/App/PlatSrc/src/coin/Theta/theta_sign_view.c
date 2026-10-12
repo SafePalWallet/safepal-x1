@@ -105,15 +105,11 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
 	view_add_txt(TXS_LABEL_PAYFROM_TITLE, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
 	memset(tmpbuf, 0, sizeof(tmpbuf));
-	if (msg->from.size > 0) {
-		tmpbuf[0] = '0';
-		tmpbuf[1] = 'x';
-		ethereum_address_checksum(msg->from.bytes, tmpbuf + 2, false, 0);
-	} else {
-		ret = wallet_gen_address_by_path(tmpbuf, sizeof(tmpbuf), coin_type, coin_uname, msg->coin.path, 0);
-		if (ret < 0) return ret;
-		db_msg("my address ret:%d addr:%s", ret, tmpbuf);
-	}
+	// Always derive the "from" address from the device key/path; never trust a
+	// host-supplied msg->from (display must match the signing account).
+	ret = wallet_gen_address_by_path(tmpbuf, sizeof(tmpbuf), coin_type, coin_uname, msg->coin.path, 0);
+	if (ret < 0) return ret;
+	db_msg("my address ret:%d addr:%s", ret, tmpbuf);
 	view_add_txt(TXS_LABEL_PAYFROM_ADDRESS, tmpbuf);
 
 	view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));

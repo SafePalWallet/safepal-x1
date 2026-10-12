@@ -60,7 +60,7 @@ int showQRWindow(HWND hParent, int client_id, unsigned int flag, int msgtype, co
             db_error("get client:%d seckey false", client_id);
             return -1;
         } else {
-            db_msg("qr client_id:%d, seckey:%s", client_id, debug_bin_to_hex(seckey, sizeof(seckey)));
+            db_msg("qr client_id:%d seckey loaded", client_id);
         }
     }
 
@@ -77,7 +77,7 @@ int showQRWindow(HWND hParent, int client_id, unsigned int flag, int msgtype, co
     } else if (max_chunk_size > 461) {
         max_chunk_size = 461;
     }
-    if (max_chunk_size == 194 && qrtype == QR_TYPE_BIN) { //Try to display it on one page
+    if (max_chunk_size == 194 && qrtype == QR_TYPE_BIN) {
         int one_page_size = size + QRCODE_PREFIX_LEN + get_qr_packet_header_len(0); // == 14
         if (one_page_size > 194 && one_page_size <= 220) {
             max_chunk_size = 220;

@@ -98,6 +98,8 @@ typedef struct {
     unsigned int time;
     int time_zone;
     uint32_t account_id;
+    uint32_t app_version;
+    uint32_t min_hw_version;
 } qr_packet_ext_header;
 
 typedef struct {

@@ -36,20 +36,17 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
     coin_type = msg->coin.type;
     coin_uname = msg->coin.uname;
+    config = getCoinConfig(COIN_TYPE_TON, "TON");
+    if (!config) {
+        db_error("missing TON main coin config");
+        return -2;
+    }
 
     if ((char) msg->operation_type == TON_TRANSFER) {
-        if (strcmp(coin_uname, "TON") == 0) {
-            config = getCoinConfig(coin_type, coin_uname);
-            if (!config) {
-                db_msg("not config type:%d name:%s", msg->coin.type, msg->coin.uname);
-                name = msg->coin.uname;
-                symbol = msg->coin.uname;
-                coin_decimals = 9;
-            } else {
-                name = config->name;
-                symbol = config->symbol;
-                coin_decimals = config->decimals;
-            }
+        if (strcmp(coin_uname, config->uname) == 0) {
+            name = config->name;
+            symbol = config->symbol;
+            coin_decimals = config->decimals;
         } else {//token
             if (is_empty_string(msg->token.name) || is_empty_string(msg->token.symbol)) {
                 db_error("invalid token name:%s or symbol:%s", msg->token.name, msg->token.symbol);
@@ -96,16 +93,16 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, tmpbuf);
         view_add_txt(0, symbol);
         view_add_txt(0, "Chain:");
-        view_add_txt(0, "Toncoin");
+        view_add_txt(0, config->name);
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYFROM_TITLE));
         view_add_txt(0, msg->action.sendCoins.from);
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
         view_add_txt(0, msg->action.sendCoins.to);
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
         memset(tmpbuf, 0x0, sizeof(tmpbuf));
-        ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, 9, &send_value, tmpbuf, sizeof(tmpbuf));
+        ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes, msg->action.sendCoins.fee.size, config->decimals, &send_value, tmpbuf, sizeof(tmpbuf));
         view_add_txt(0, tmpbuf);
-        view_add_txt(0, "TON");
+        view_add_txt(0, config->symbol);
     } else if ((char) msg->operation_type == TON_DAPP) {
         view->coin_symbol = res_getLabel(LANG_LABEL_TX_METHOD_SIGN_MSG);
 
@@ -113,7 +110,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, symbol);
 
         view_add_txt(0, "Chain:");
-        view_add_txt(0, "Toncoin");
+        view_add_txt(0, config->name);
 
         view_add_txt(0, "Data:");
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
@@ -125,7 +122,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         view_add_txt(0, symbol);
 
         view_add_txt(0, "Chain:");
-        view_add_txt(0, "Toncoin");
+        view_add_txt(0, config->name);
 
         view_add_txt(0, "Data:");
         db->tx_type = TX_TYPE_APP_SIGN_MSG;
@@ -135,6 +132,7 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
     } else if ((char) msg->operation_type == TON_NFT) {
         name = msg->action.sendCoins.app_name;
         symbol = msg->action.sendCoins.app_name;
+        coin_decimals = config->decimals;
 
         view->coin_symbol = res_getLabel(LANG_LABEL_SEND_NFT);
         view_add_txt(0, symbol);
@@ -159,19 +157,19 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
         omit_string(tmpbuf, msg->action.sendCoins.to, 26, 11);
         view_add_txt(0, tmpbuf);
 
-        coin_decimals = 9;
         view_add_txt(0, res_getLabel(LANG_LABEL_TXS_FEED_TITLE));
         memset(tmpbuf, 0, sizeof(tmpbuf));
         ret = bignum2double((const unsigned char *) msg->action.sendCoins.fee.bytes,
-                            msg->action.sendCoins.fee.size, coin_decimals, &send_value, tmpbuf,
+                            msg->action.sendCoins.fee.size, config->decimals, &send_value, tmpbuf,
                             sizeof(tmpbuf));
         db_msg("fee send_value:%.8lf", send_value);
-        snprintf(tmpbuf, sizeof(tmpbuf), "%s TON", tmpbuf);
+        strlcat(tmpbuf, " ", sizeof(tmpbuf));
+        strlcat(tmpbuf, config->symbol, sizeof(tmpbuf));
         db_msg("feed value:%s", tmpbuf);
         view_add_txt(0, tmpbuf);
 
         view_add_txt(0, "Chain:");
-        view_add_txt(0, "Toncoin");
+        view_add_txt(0, config->name);
     }
 
     if ((char) msg->operation_type == TON_TRANSFER && !is_empty_string(msg->action.sendCoins.payload)) {

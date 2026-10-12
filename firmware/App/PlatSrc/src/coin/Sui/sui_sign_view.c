@@ -139,15 +139,14 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 
         view_add_txt(TXS_LABEL_TOTAL_VALUE, "Object Id:");
 
+        if (msg->action.nft.kind.object_n < 1 || msg->action.nft.kind.object == NULL) {
+            db_error("SUI_NFT object array empty");
+            return -1010;
+        }
         char tmpbuf[128];
         GasPayment *object = msg->action.nft.kind.object;
         memset(tmpbuf, 0, sizeof(tmpbuf));
-        memcpy(tmpbuf, object->objectId, 7);
-        tmpbuf[7] = '.';
-        tmpbuf[8] = '.';
-        tmpbuf[9] = '.';
-        int len = strlen(object->objectId);
-        memcpy(tmpbuf + 10, object->objectId + (len - 8), 8);
+        omit_string(tmpbuf, object->objectId, 7, 8);
         db_msg("tmpbuf:%s", tmpbuf);
         view_add_txt(TXS_LABEL_TOTAL_MONEY, tmpbuf);
 

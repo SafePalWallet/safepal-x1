@@ -48,7 +48,7 @@ extern uint32_t Image$$RW_IRAM1$$ZI$$Length;
 static long mShutdownFutureTime = 0;
 static long mShutdownCountdownTime = 0;
 
-const FILE_INFO_ST file_info[] __attribute__((section(".ARM.__at_0x010A5000"))) = {
+const FILE_INFO_ST file_info[] __attribute__((section(".ARM.__at_0x0106D000"))) = {
         "FILE_INFO", \
     (uint32_t) 0x04, \
     (uint32_t) 0x01, \
@@ -65,7 +65,7 @@ const FILE_INFO_ST file_info[] __attribute__((section(".ARM.__at_0x010A5000"))) 
     0 \
 };
 
-int main(void *data) __attribute__((section(".ARM.__at_0x010A5200")));
+int main(void *data) __attribute__((section(".ARM.__at_0x0106D200")));
 
 static void CopyCode2Ram() {
     uint32_t SrcBase;
@@ -167,6 +167,9 @@ static int wallet_init_check(int init_ret) {
 }
 
 static int wallet_main2_init() {
+#ifdef CONFIG_USE_SE_XXXX
+    sapi_init0();
+#endif
     proto_init_env(0);
     //init secure api
     int device_inited = device_is_inited();
@@ -218,13 +221,20 @@ int destoryDevice(void) {
     return 0;
 }
 
-int dispOTAOK(void) {
+#ifndef PRODUCT_TYPE_X1_R32
+int dispOTAOK_(void) {
     char tips[256] = {0};
+
+    if (gHaveSeed) { //try upgrade DB
+        storage_upgrade(0);
+    }
+
     settings_save(SETTING_KEY_OTA_PRE_VERSION, 0);
     const char *format = (res_getLabel(LANG_LABEL_UPGRADE_SUCCESS));
     snprintf(tips, sizeof(tips), format, DEVICE_APP_VERSION);
     gui_disp_info(res_getLabel(LANG_LABEL_UPGRADE), tips, TEXT_ALIGN_LEFT | TEXT_VALIGN_CENTER, NULL, res_getLabel(LANG_LABEL_SUBMENU_OK), EVENT_KEY_F1);
 }
+#endif
 
 static int hw_break_cnt = 0;
 

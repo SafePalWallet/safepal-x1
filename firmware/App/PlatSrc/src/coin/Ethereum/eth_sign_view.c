@@ -588,6 +588,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		view_add_txt(TXS_LABEL_PAYTO_TITLE, res_getLabel(LANG_LABEL_TXS_PAYTO_TITLE));
 		memset(tmpbuf, 0, sizeof(tmpbuf));
 		if (is7702) {
+			if (msg->callInfo.call_n < 1) {
+				db_error("EIP-7702 calls empty");
+				return -806;
+			}
 			int pos = 2;
 			tmpbuf[0] = '0';
 			tmpbuf[1] = 'x';
@@ -772,6 +776,10 @@ static int on_sign_show(void *session, DynamicViewCtx *view) {
 		omit_string(tmpbuf, tmpbuf, 8, 8);
 		view_add_txt(TXS_LABEL_APPROVE_TOKEN_VALUE, tmpbuf);
 
+		if (msg->list_n < 1) {
+			db_error("U_APPROVE list empty");
+			return -809;
+		}
 		memset(tmpbuf, 0, sizeof(tmpbuf));
 		view_add_txt(TXS_LABEL_APPROVE_AMOUNT_TITLE, "Interact with");
 		tmpbuf[0] = '0';

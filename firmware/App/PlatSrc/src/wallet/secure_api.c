@@ -55,6 +55,9 @@ enum {
     SAPI_CMD_ENCODE_DATA = 0xA9,
     SAPI_CMD_DECODE_DATA = 0xAA,
 
+#ifdef PRODUCT_TYPE_X1_R32
+    SAPI_CMD_GET_CPUID = 0xF2,
+#endif
 };
 
 int sapi_subcode = 0;
@@ -63,7 +66,16 @@ static unsigned char iobuff[264] = {0};
 static char unit_inited = 0;
 static unsigned int se_app_version = 0;
 static int handshake_state = 0;
+
+#ifdef PRODUCT_TYPE_X1_R32
+static unsigned char handshake_code[32] = {0};
+static unsigned char gChipid[16];
+static char gReaded = 0;
+static int se_ota_file_offset = 0;
+static SE_OP_FUNCS seop;
+#else
 static unsigned char handshake_code[16] = {0};
+#endif
 
 static int G_lock = 0;
 
@@ -105,26 +117,74 @@ static int call_secure_agent_l(int cmd, const unsigned char *data, int size, uns
     int ret = -1;
     unsigned char *p;
     sapi_subcode = 0;
-    if (!unit_inited && cmd > 0xF) {
+    if (!unit_inited && cmd > 0xF && cmd < 0xE0) {
         db_serr("not inited cmd:0x%x", cmd);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
     if (size > 0xF0) {
         db_serr("invalid len:%d cmd:0x%x", size, cmd);
-        return -1;
+        ret = -2;
+        goto cleanup;
     }
     if (!handshake_state && cmd > 0xF && cmd < 0xE0) {
         db_serr("invalid handshake state:%d cmd:0x%x", handshake_state, cmd);
-        return -1;
+        ret = -3;
+        goto cleanup;
     }
     int iolen = 0;
     memset(iobuff, 0, sizeof(iobuff));
+#ifdef CONFIG_USE_SE_XXXX
+    uint8_t digest[SHA256_DIGEST_LENGTH];
+    iolen = 1;
+    iobuff[0] = (unsigned char) cmd;
     if (data && size > 0) {
         memcpy(iobuff + iolen, data, size);
         iolen += size;
     }
 
-    db_secure("sapi cmd:0x%x req:%d -> %s", cmd, iolen, debug_ubin_to_hex(iobuff, iolen));
+    //add digest
+    unsigned char salt_t[] = {0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31};
+    XDEFINE_BUFFER(salt_t);
+    sha256_message(salt_t, sizeof(salt_t), iobuff, size + 1, digest);
+    memcpy(iobuff + iolen, digest, IO_HASH_CHECK_LEN);
+    iolen += IO_HASH_CHECK_LEN;
+
+    db_secure("sapi cmd:0x%x req:%d", cmd, iolen);
+    if (iolen > 16 && cmd > 0xF && cmd < 0xE0) { //encrypt
+        ret = iolen - 1;
+        db_secure("encrypt request len:%d", ret);
+        aes256_cbc_encrypt(iobuff + 1, iobuff + 1, ret, handshake_code);
+        db_secure("sapi encrypted cmd:0x%x req:%d", cmd, iolen);
+    }
+
+    ret = seop.pwrite(iobuff, iolen);
+    if (ret != iolen) {
+        db_serr("se write false cmde:%d ret:%d", cmd, ret);
+        ret = -4;
+        goto cleanup;
+    }
+    memset(iobuff, 0, sizeof(iobuff));
+
+    int timeout_ms = 1500;
+    ret = seop.pread(iobuff, sizeof(iobuff), timeout_ms, 10);
+    if (ret < 0) {
+        db_serr("read agent false cmd:0x%x ret:%d", cmd, ret);
+        ret = -5;
+        goto cleanup;
+    }
+    if (ret < 8) {
+        db_serr("invalid resp cmd:0x%x ret:%d", cmd, ret);
+        ret = -6;
+        goto cleanup;
+    }
+    size = ret;
+#else
+    if (data && size > 0) {
+        memcpy(iobuff + iolen, data, size);
+        iolen += size;
+    }
+    db_secure("sapi cmd:0x%x req:%d", cmd, iolen);
     ret = sec_sapi_command(cmd, iolen, iobuff, iobuff);
     if (ret < 0) {
         db_serr("sapi cmd:%#x ret:%d code:0x%x", cmd, ret, iobuff[1]);
@@ -133,19 +193,40 @@ static int call_secure_agent_l(int cmd, const unsigned char *data, int size, uns
     } else {
         size = ret;
     }
+#endif
 
-    db_secure("sapi cmd:0x%x resp:%d -> %s", cmd, ret, debug_ubin_to_hex(iobuff, size));
+    db_secure("sapi cmd:0x%x resp:%d", cmd, ret);
     if (iobuff[0] != cmd) {
-        db_serr("invalid respone cmd:0x%x resp:%s", cmd, debug_ubin_to_hex(iobuff, size));
-        return -5;
+        db_serr("invalid respone cmd:0x%x", cmd);
+        ret = -7;
+        goto cleanup;
     }
     if (iobuff[1] != 0) {
-        db_serr("invalid result cmd:0x%x code:0x%x subcode:0x%x %x resp:%s", cmd, iobuff[1], iobuff[2], iobuff[3], debug_ubin_to_hex(iobuff, size));
+        db_serr("invalid result cmd:0x%x code:0x%x subcode:0x%x %x", cmd, iobuff[1], iobuff[2], iobuff[3]);
         ret = iobuff[1];
         if (ret > 0) ret = -ret;
         sapi_subcode = iobuff[2] | (iobuff[3] << 8);
-        return ret;
+        goto cleanup;
     }
+
+    //resp
+#ifdef CONFIG_USE_SE_XXXX
+    size = ret - IO_HASH_CHECK_LEN; // - hashcode, our resp data size
+
+    if (size >= (4 + 16) && (cmd > 0xF && cmd < 0xE0)) { //decrypt
+        aes256_cbc_decrypt(iobuff + 4, iobuff + 4, size - 4, handshake_code);
+        db_secure("decrypt cmd:0x%x resp:%d", cmd, ret);
+    }
+    p = iobuff;
+    sha256_message(salt_t, sizeof(salt_t), p, size, digest);
+    memset(salt_t, 0, sizeof(salt_t));
+    if (memcmp(digest, p + size, IO_HASH_CHECK_LEN) != 0) {
+        db_serr("invalid hash check expect:%s", debug_ubin_to_hex(p + size, IO_HASH_CHECK_LEN));
+        db_serr("invalid hash check have:%s", debug_ubin_to_hex(digest, IO_HASH_CHECK_LEN));
+        ret = -8;
+        goto cleanup;
+    }
+#endif
 
     if (out) {
         p = iobuff + 4;
@@ -159,13 +240,20 @@ static int call_secure_agent_l(int cmd, const unsigned char *data, int size, uns
         }
         if (mini_expect_size > 0 && size < mini_expect_size) { //no resp data
             db_serr("resp size:%d < mini_expect_size:%d", size, mini_expect_size);
-            return -10;
+            ret = -10;
+            goto cleanup;
         } else {
-            return size;
+            ret = size;
+            goto cleanup;
         }
     } else {
-        return 0;
+        ret = 0;
+        goto cleanup;
     }
+
+cleanup:
+    memzero(iobuff, sizeof(iobuff));
+    return ret;
 }
 
 static int call_secure_agent(int cmd, const unsigned char *data, int size, unsigned char *out, unsigned int outsize, int mini_expect_size) {
@@ -232,7 +320,7 @@ static int sapi_handshake() {
     memset(buffer, 0, sizeof(buffer));
     do {
         random_buffer(buffer, 32);
-        db_secure("myrandkey:%s", debug_ubin_to_hex(buffer, 32));
+        db_secure("ephemeral handshake key generated");
         bn_read_be(buffer, &k);
     } while (bn_is_zero(&k) || !bn_is_less(&k, &curve->order));
 
@@ -241,7 +329,7 @@ static int sapi_handshake() {
     bn_write_be(&pub.y, buffer + 32);
     db_secure("my pubkey:%s", debug_ubin_to_hex(buffer, 64));
     random_buffer(randnum, 32);
-    db_secure("randnum:%s", debug_ubin_to_hex(randnum, 32));
+    db_secure("handshake random generated");
     memcpy(buffer + 64, randnum, 32);
 
     int h0_version;
@@ -250,7 +338,8 @@ static int sapi_handshake() {
     if (ret < 0) {
         db_serr("HANDSHAKE0 ret:%d", ret);
         if (ret < 0) {
-            return ret;
+            ret += -100;
+            goto cleanup;
         }
     }
     if (ret == 118 || ret == (118 + 64)) {
@@ -258,7 +347,8 @@ static int sapi_handshake() {
         if (ret == (118 + 64)) have_sign_resp = 1;
     } else {
         db_serr("invalid ret:%d", ret);
-        return -1;
+        ret = -1;
+        goto cleanup;
     }
 
     //check resp
@@ -266,21 +356,24 @@ static int sapi_handshake() {
     bn_read_be(buffer + 32, &pub.y);
     if (!ecdsa_validate_pubkey(curve, &pub)) {
         db_serr("invalid resp pubkey inbuf:%s", debug_ubin_to_hex(buffer, 64));
-        return -2;
+        ret = -2;
+        goto cleanup;
     }
     p = buffer + 64;
     //check digest
-    unsigned char salt[] = {
-		0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,
-		0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,
-    };
+#ifdef CONFIG_USE_SE_XXXX
+    unsigned char salt[] = {0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31};
+#else
+    unsigned char salt[] = {0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31};
+#endif
     XDEFINE_BUFFER(salt);
     sha256_message(salt, sizeof(salt), randnum, 4, buffer); //reuse buffer save digest
     memset(salt, 0, sizeof(salt));
     if (memcmp(buffer, p, 16) != 0) {
         db_serr("invalid resp digest expect:%s", debug_ubin_to_hex(buffer, 16));
         db_serr("digest resp:%s", debug_ubin_to_hex(p, 16));
-        return -3;
+        ret = -3;
+        goto cleanup;
     }
     p += 16;
     if (h0_version == 2) {
@@ -293,7 +386,8 @@ static int sapi_handshake() {
     unsigned char flag = 0;
     if (device_type != SECHIP_DEVICE_TYPE) {
         db_serr("invalid device_type:%d != need:%d", device_type, SECHIP_DEVICE_TYPE);
-        return -4;
+        ret = -4;
+        goto cleanup;
     }
     if (h0_version == 2) {
         p += 4;
@@ -303,12 +397,14 @@ static int sapi_handshake() {
     db_secure("HANDSHAKE0 version:%d resp device_type:%d app_version:%d flag:0x%02x sign:%d", h0_version, device_type, app_version, flag, have_sign_resp);
     if (!have_sign_resp && device_is_inited()) {
         db_serr("device inited,but not sign resp");
-        return -11;
+        ret = -11;
+        goto cleanup;
     }
     if (have_sign_resp) {
         if (device_check_se_shake(randnum, p) != 0) {
             db_serr("check shake sign false");
-            return -5;
+            ret = -5;
+            goto cleanup;
         }
     }
     int hs1_len = 16;
@@ -316,15 +412,16 @@ static int sapi_handshake() {
         //reuse buffer in handshake1
         if (device_sign_se_shake(se_randnum, buffer + 16) != 0) {
             db_serr("sign shake false");
-            return -5;
+            ret = -6;
+            goto cleanup;
         }
         hs1_len += 64;
     }
-
-    unsigned char salt_h[] = {
-		0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,
-		0x01,0x23,0x45,0x67,0x89,0xab,0xcd,0xef,
-	};
+#ifdef CONFIG_USE_SE_XXXX
+    unsigned char salt_h[] = {0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31};
+#else
+    unsigned char salt_h[] = {0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31, 0x31};
+#endif
     XDEFINE_BUFFER(salt_h);
     sha256_message(salt_h, sizeof(salt_h), se_randnum, 4, se_randnum);
     memset(salt_h, 0, sizeof(salt_h));
@@ -338,17 +435,26 @@ static int sapi_handshake() {
     ret = call_secure_agent0(SAPI_CMD_HANDSHAKE1, buffer, hs1_len);
     if (ret < 0) {
         db_serr("HANDSHAKE1 ret:%d", ret);
-        return ret;
+        ret += -200;
+        goto cleanup;
     }
     //save handshake code
     point_multiply(curve, &k, &pub, &pub);
     bn_write_be(&pub.x, buffer);
     bn_write_be(&pub.y, buffer + 32);
     sha256_Raw(buffer, 64, buffer);
-    memcpy(handshake_code, buffer, 16);
+    memcpy(handshake_code, buffer, sizeof(handshake_code));
     handshake_state = 1;
-    db_secure("handshake end,code:%s", debug_ubin_to_hex(handshake_code, 16));
-    return 0;
+	db_secure("handshake end");
+    ret = 0;
+
+cleanup:
+    memzero(buffer, sizeof(buffer));
+    memzero(randnum, sizeof(randnum));
+    memzero(se_randnum, sizeof(se_randnum));
+    memzero(&k, sizeof(k));
+    memzero(&pub, sizeof(pub));
+    return ret;
 }
 
 int sechip_get_id(unsigned char id[SECHIP_EXT_ID_LEN]) {
@@ -372,6 +478,24 @@ int sechip_get_hostkey(unsigned char hostkey[16]) {
     return 16;
 }
 
+#ifdef PRODUCT_TYPE_X1_R32
+int sapi_init0() {
+    db_secure("se_type:%d", SECHIP_DEVICE_TYPE);
+    seop.init = 0;
+
+    seop.close = se_close;
+    seop.write = se_write;
+    seop.pwrite = se_pwrite;
+    seop.read = se_read;
+    seop.pread = se_pread;
+    seop.get_chipid = sapi_get_chipid;
+    seop.init = se_init;
+
+    seop.init();
+    return 0;
+}
+#endif
+
 int sapi_reset() {
     LOCK();
     reset_all_state();
@@ -385,6 +509,12 @@ int sapi_init() {
     if (unit_inited) {
         return 0;
     }
+#ifdef PRODUCT_TYPE_X1_R32
+    if (!seop.init) {
+        db_serr("not seop inited");
+        return -21;
+    }
+#endif
     LOCK();
     if (unit_inited) {
         db_secure("unit_inited skip...");
@@ -518,7 +648,7 @@ int sapi_get_random(unsigned char *buff, int size) {
             db_serr("invalid random zero result len:%d times:%d", checksize, times);
             continue;
         }
-        db_secure("radom size:%d data:%s", size, debug_ubin_to_hex(buff, size));
+        db_secure("random size:%d", size);
         break;
     }
     return (ret == size) ? size : -1;
@@ -580,8 +710,12 @@ int sapi_encode_data(const unsigned char *passwd, int passlen, uint8_t encode_ty
 int sapi_get_xpub(uint16_t curv, const char *path, const unsigned char *passwd, int passlen, unsigned char *xpub, unsigned int size) {
     unsigned char buf[80] = {0};
     int ret;
-    int pathlen = strlen(path);
-    if (!path || pathlen < 5) {
+    if (!path) {
+        db_serr("null path");
+        return -1;
+    }
+    size_t pathlen = strlen(path);
+    if (pathlen < 5) {
         db_serr("invaild patch:%s", path);
         return -1;
     }
@@ -598,13 +732,24 @@ int sapi_get_xpub(uint16_t curv, const char *path, const unsigned char *passwd, 
     if (!is_se_builtin_curve(curv)) {
         return -1;
     }
+    if (pathlen > sizeof(buf)) {
+        db_serr("path too long");
+        return -1;
+    }
+    // Each ser_data field adds a one-byte length prefix.
+    size_t required = sizeof(curv) + (1 + (size_t) passlen) + (1 + pathlen);
+    if (required > sizeof(buf)) {
+        db_serr("buffer overload path:%s", path);
+        return -1;
+    }
     unsigned char *p = buf;
     p += ser_uint16(p, curv);
-    p += ser_data(p, (const unsigned char *) passwd, passlen);
-    p += ser_data(p, (const unsigned char *) path, pathlen);
+    p += ser_data(p, (const unsigned char *) passwd, (unsigned char) passlen);
+    p += ser_data(p, (const unsigned char *) path, (unsigned char) pathlen);
     set_se_waittime(curv, 3000);
     ret = call_secure_agent(SAPI_CMD_GET_XPUB, buf, p - buf, xpub, size, 102);
     clean_se_waittime();
+    memzero(buf, sizeof(buf));
     return ret;
 }
 
@@ -613,7 +758,7 @@ int sapi_get_xpub(uint16_t curv, const char *path, const unsigned char *passwd, 
 int sapi_sign_digest(uint16_t curv, const char *path, const unsigned char *passhash, unsigned char sz_passhash,
                      const unsigned char *data, unsigned int size, unsigned char check_func, unsigned char *out, unsigned int outsize) {
     unsigned char buf[128];
-    int pathlen = strlen(path);
+    size_t pathlen = strlen(path);
     if (!check_passhash_len(sz_passhash)) {
         db_serr("invalid passhash len:%d", sz_passhash);
         return -1;
@@ -626,7 +771,13 @@ int sapi_sign_digest(uint16_t curv, const char *path, const unsigned char *passh
         db_serr("invalid digest len:%d", size);
         return -1;
     }
-    if (sizeof(curv) + pathlen + size + sz_passhash >= sizeof(buf)) {
+    if (pathlen > sizeof(buf)) {
+        db_serr("path too long");
+        return -1;
+    }
+    // Each ser_data field adds a one-byte length prefix, followed by check_func.
+    size_t required = sizeof(curv) + (1 + sz_passhash) + (1 + pathlen) + (1 + size) + sizeof(check_func);
+    if (required > sizeof(buf)) {
         db_serr("buffer overload path:%s size:%d", path, size);
         return -1;
     }
@@ -634,13 +785,14 @@ int sapi_sign_digest(uint16_t curv, const char *path, const unsigned char *passh
     unsigned char *p = buf;
     p += ser_uint16(p, curv);
     p += ser_data(p, passhash, sz_passhash);
-    p += ser_data(p, (const unsigned char *) path, pathlen);
+    p += ser_data(p, (const unsigned char *) path, (unsigned char) pathlen);
     p += ser_data(p, data, size);
     *p++ = check_func;
 
     set_se_waittime(curv, 5000);
     int ret = call_secure_agent(SAPI_CMD_SIGN_DIGEST, buf, p - buf, out, outsize, 65);
     clean_se_waittime();
+    memzero(buf, sizeof(buf));
     return ret;
 }
 
@@ -659,6 +811,7 @@ int sapi_change_passwd(const unsigned char *oldpasswd, int oldlen, const unsigne
     memcpy(p, newpasswd, newlen);
 
     int ret = call_secure_agent0(SAPI_CMD_CHANGE_PASSWD, buf, oldlen + newlen + 2);
+    memzero(buf, sizeof(buf));
     if (ret != 0) {
         db_serr("change passwd false ret:%d", ret);
     }
@@ -681,6 +834,7 @@ int sapi_check_passwd(const unsigned char *oldpasswd, int oldlen) {
     memcpy(p, oldpasswd, oldlen);
 
     int ret = call_secure_agent0(SAPI_CMD_CHECK_PASSWD, buf, oldlen + 1);
+    memzero(buf, sizeof(buf));
     if (ret != 0) {
         db_serr("check passwd false ret:%d", ret);
     }
@@ -711,6 +865,8 @@ int sapi_store_seed(const unsigned char *seed, int seedlen, const unsigned char 
     memcpy(p, digest, 8);
 
     int ret = call_secure_agent0(SAPI_CMD_STORE_SEED, buf, seedlen + passlen + 2 + 8);
+    memzero(buf, sizeof(buf));
+    memzero(digest, sizeof(digest));
     if (ret != 0) {
         db_serr("store seed false ret:%d", ret);
     }
@@ -756,8 +912,8 @@ int sapi_verify_mnemonic(const unsigned char *passwd, int passlen, const unsigne
         db_serr("invaild passlen:%d", passlen);
         return -1;
     }
-    if (*(mnemonic + len)) {
-        db_serr("invaild mnemonic non end 0");
+    if (!mnemonic || len <= 0) {
+        db_serr("invaild mnemonic len:%d", len);
         return -2;
     }
     unsigned char *p = buf;
@@ -779,6 +935,7 @@ int sapi_verify_mnemonic(const unsigned char *passwd, int passlen, const unsigne
     set_se_waittime(0, 4000);
     int ret = call_secure_agent0(SAPI_CMD_VERIFY_MNEMONIC, buf, p - buf);
     clean_se_waittime();
+    memzero(buf, sizeof(buf));
     if (ret != 0) {
         db_serr("verify mnemonic false ret:%d", ret);
         return ret;
@@ -810,6 +967,7 @@ int sapi_set_passphrase(const unsigned char *passwd, int passlen, const unsigned
     set_se_waittime(0, 4000);
     int ret = call_secure_agent0(SAPI_CMD_SET_PASSPHRASE, buf, p - buf);
     clean_se_waittime();
+    memzero(buf, sizeof(buf));
     if (ret != 0) {
         db_serr("set passphrase false ret:%d", ret);
     }

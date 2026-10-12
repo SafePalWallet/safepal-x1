@@ -145,10 +145,9 @@ int hash_user_passwd(const char *passwd, int len, unsigned char hash[PASSWD_HASH
     //db_secure("digest 0:%s", debug_ubin_to_hex(digest, SHA256_DIGEST_LENGTH));
     pbkdf2_hmac_sha256((const unsigned char *) passwd, len, digest, SHA256_DIGEST_LENGTH, 2048, hash,
                        SHA256_DIGEST_LENGTH);
-    db_secure("hash:%s", debug_ubin_to_hex(hash, PASSWD_HASHED_LEN));
+    db_secure("passwd hashed");
     memset(digest, 0, sizeof(digest));
     memset(salt, 0, sizeof(salt));
-    memset(&binfo, 0, sizeof(binfo));
 #ifdef DB_DEBUG
     uint32_t t1;
     ddi_sys_get_tick(&t1);
@@ -191,10 +190,8 @@ passwdKeyboard(HWND hParent, const char *title, const int opType, unsigned char 
                 }
                 continue;
             } else {
-                if (is_not_empty_string(kb_result)) {
-                    db_msg("kb_result:%s", kb_result);
-                } else {
-                    continue;
+                if (!is_not_empty_string(kb_result)) {
+                    continue; //empty -> re-prompt; non-empty short PIN falls through to verify
                 }
             }
         } else if (ret < 0) {
